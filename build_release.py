@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SRC_HTML = os.path.join(HERE, "editor.html")
 SRC_PACK = os.path.join(HERE, "world-1936.pdxmap")
 DIST = os.path.join(HERE, "dist")
-VERSION = "1.7"
+VERSION = "1.8"
 
 # 发布版里不该出现的东西（在本机路径、账号名、内网地址）
 FORBIDDEN = [
