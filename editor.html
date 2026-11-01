@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -105,7 +105,7 @@
   html[data-theme="win95"] #countries::-webkit-scrollbar-thumb,
   html[data-theme="win95"] #notice .nbody::-webkit-scrollbar-thumb{
     background:#c0c0c0;border:2px outset #fff;border-radius:0}
-  .ph{padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+  .ph{position:relative;padding:12px 14px 10px;border-bottom:1px solid var(--line)}
   .ph h1{margin:0;font-size:14px;font-weight:600;letter-spacing:.5px}
   .ph h1 span{color:var(--gold)}
   .sub{margin-top:3px;color:var(--faint);font-size:11px}
@@ -148,8 +148,33 @@
   #drop h2{margin:0;font-size:17px;font-weight:600}
   #drop p{margin:0;color:var(--dim);font-size:12.5px;max-width:420px;line-height:1.8}
   #drop .big{color:var(--gold);font-size:12px}
+
+  /* ---------- 开始页 ---------- */
+  #start{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);}
+  #start.hide{display:none}
+  #start .hide{display:none}
+  #start .sbox{width:min(880px,calc(100vw - 64px));text-align:center}
+  #start h1{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:2px;color:var(--text)}
+  #start h1 em{font-style:normal;color:var(--gold)}
+  #start .stip{margin:0 0 26px;color:var(--faint);font-size:12.5px;letter-spacing:.5px}
+  #start .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  #start .card{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 16px 14px;cursor:pointer;color:var(--text);font-family:inherit;
+    transition:border-color .12s,transform .12s,background .12s}
+  #start .card:hover{border-color:var(--gold);transform:translateY(-2px);background:var(--panel2)}
+  #start .card b{display:block;font-size:17px;font-weight:700;letter-spacing:1px;margin-bottom:6px}
+  #start .card.blank b{color:var(--accent)}
+  #start .card.cont b{color:var(--ok)}
+  #start .card span{display:block;color:var(--dim);font-size:11.5px;line-height:1.75}
+  #start .sfoot{margin-top:22px;color:var(--faint);font-size:11px}
+  #start .sfoot a{color:var(--faint)}
+  #start .card .tag{display:inline-block;margin-top:9px;font-size:10.5px;color:var(--faint);
+    border:1px solid var(--line);border-radius:99px;padding:1px 8px}
+  html[data-theme="win95"] #start .card{border:2px outset #fff}
+  html[data-theme="win95"] #start .card:hover{border:2px outset #fff;transform:none}
   #notice{position:absolute;inset:0;background:color-mix(in srgb, var(--bg) 78%, transparent);display:flex;align-items:center;
-    justify-content:center;z-index:60;backdrop-filter:blur(4px)}
+    justify-content:center;z-index:80;backdrop-filter:blur(4px)}
   #notice.hide{display:none}
   #notice .box{width:540px;max-width:calc(100vw - 48px);max-height:78vh;display:flex;flex-direction:column}
   #notice .nbody{overflow-y:auto;font-size:12.5px;line-height:1.9;color:var(--dim);padding-right:6px;margin-bottom:4px}
@@ -200,6 +225,7 @@
   <div class="ph">
     <h1>地图<span>工坊</span></h1>
     <div class="sub" id="packName">未载入</div>
+    <button class="btn" id="sceneBtn" style="position:absolute;right:12px;top:12px;padding:3px 9px;font-size:11px">剧本</button>
   </div>
 
   <div class="sec">
@@ -329,6 +355,35 @@
 
 <div id="toast"></div>
 
+<div id="start" class="hide">
+  <div class="sbox">
+    <h1>地图<em>工坊</em></h1>
+    <p class="stip">选一个剧本开始</p>
+    <div class="cards">
+      <button class="card cont hide" id="contCard">
+        <b>继续上次</b>
+        <span>恢复你上次没画完的进度。</span>
+      </button>
+      <button class="card" data-scene="0">
+        <b>1936</b>
+        <span>战前的世界。各国带着殖民地与傀儡，边界最完整。</span>
+        <span class="tag">101 个国家</span>
+      </button>
+      <button class="card" data-scene="1">
+        <b>1939</b>
+        <span>战争爆发。德国已吞并奥地利与捷克，欧洲版图改写。</span>
+        <span class="tag">开战前夜</span>
+      </button>
+      <button class="card blank" data-scene="2">
+        <b>空白底图</b>
+        <span>没有任何国家，地形与省界都还在。适合从零画架空世界。</span>
+        <span class="tag">从零开始</span>
+      </button>
+    </div>
+    <div class="sfoot"><span id="startVer"></span> · <a href="#" id="startNotice">注意与声明</a></div>
+  </div>
+</div>
+
 <div id="notice" class="hide">
   <div class="box">
     <h3>注意与声明</h3>
@@ -340,7 +395,7 @@
         <li><b>隐私</b>：所有编辑只保存在你自己浏览器的本地存储里，工具不联网、不上传任何数据。</li>
         <li><b>浏览器</b>：请用 Microsoft Edge 或 Chrome 打开。微信、QQ、搜狗等内置浏览器内核较旧，可能白屏。</li>
       </ol>
-      <p style="color:var(--faint)">v1.44 · 由 DeepSeek Harness 协助编写</p>
+      <p style="color:var(--faint)">v1.5 · 由 DeepSeek Harness 协助编写</p>
     </div>
     <div class="nfoot">
       <label><input type="checkbox" id="noticeAck"> 不再提示</label>
@@ -751,6 +806,7 @@ async function loadPack(file) {
   $("#drop").classList.add("hide");
   drawNow();
   tryRestore();
+  showStartPage();
   toast("载入完成");
 
   if (new URLSearchParams(location.search).has("selftest")) runSelfTest();
@@ -793,25 +849,7 @@ function initWorld(tm, titles) {
   STATES_BY_ID = new Map(states.map(s => [s.id, s.provinces]));
   SRS_BY_ID = new Map(srs.map(s => [s.id, s.provinces]));
 
-  // 1936 头衔 -> 国家槽位
-  const tier0 = tm.subarray(0, NT);
-  const used = new Map();
-  for (let p = 1; p < NT; p++) {
-    const t = tier0[p];
-    if (t === NO) continue;
-    if (!used.has(t)) used.set(t, used.size);
-    OWNER[p] = used.get(t);
-  }
-  countries = [];
-  for (const [tid, slot] of used) {
-    countries.push({slot, titleId: tid, name: names[tid], color: colors[tid].slice()});
-  }
-  countries.sort((a, b) => a.name.localeCompare(b.name, "zh"));
-  // 重新编号，保证槽位连续
-  countries.forEach((c, i) => { c.slot = i; });
-  const remap = new Map();
-  for (const [tid, slot] of used) remap.set(slot, countries.find(c => c.titleId === tid).slot);
-  for (let p = 1; p < NT; p++) if (OWNER[p] !== NO) OWNER[p] = remap.get(OWNER[p]);
+  buildCountriesFromTier(0);
 
   // 水域：空白剧本（tier 2）挂头衔的就是水
   water = new Uint8Array(NT);
@@ -834,6 +872,102 @@ function initWorld(tm, titles) {
   zoneOfProv = new Uint8Array(LUT_N);
   zonePalData = new Uint8Array(64 * 4);
   updateFacData();
+}
+
+
+/* ---------- 剧本 ---------- */
+let scenario = 0;            // 0=1936  1=1939  2=空白
+let restoredLast = false;
+
+/** 按 titlemap 的某一档重建国家名单与归属 */
+function buildCountriesFromTier(tierIdx) {
+  const tm = PACK.tm, titles = PACK.titles;
+  const names = titles.names, colors = titles.colors;
+  const base = tierIdx * NT;
+  OWNER.fill(NO);
+  const used = new Map();
+  for (let p = 1; p < NT; p++) {
+    const t = tm[base + p];
+    if (t === NO) continue;
+    if (!used.has(t)) used.set(t, used.size);
+    OWNER[p] = used.get(t);
+  }
+  const list = [];
+  for (const [tid, slot] of used) {
+    list.push({slot, titleId: tid, name: names[tid], color: colors[tid].slice()});
+  }
+  list.sort((a, b) => a.name.localeCompare(b.name, "zh"));
+  list.forEach((c, i) => { c.slot = i; });
+  const remap = new Map();
+  for (const [tid, slot] of used) remap.set(slot, list.find(c => c.titleId === tid).slot);
+  for (let p = 1; p < NT; p++) if (OWNER[p] !== NO) OWNER[p] = remap.get(OWNER[p]);
+  countries = list;
+  cur = countries.findIndex(c => c.name === "德意志国");
+  if (cur < 0) cur = 0;
+}
+
+/** 切剧本：清空编辑，重铺归属 */
+function applyScenario(s) {
+  if (!PACK) return;
+  buildCountriesFromTier(s === 2 ? 0 : s);
+  if (s === 2) OWNER.fill(NO);
+
+  undoStack.length = 0;
+  redoStack.length = 0;
+  stroke = null;
+  updateUndo();
+
+  factions = [];
+  facOfCountry = new Uint8Array(countries.length);
+  provFacData = new Uint8Array(LUT_N);
+  facPalData = new Uint8Array(64 * 4);
+  curFac = -1;
+
+  zones = [];
+  zoneOfProv = new Uint8Array(LUT_N);
+  zonePalData = new Uint8Array(64 * 4);
+  curZone = -1;
+
+  updateFacData();
+  ownerTexData.fill(NO);
+  for (let p = 1; p < NT; p++) ownerTexData[p] = OWNER[p];
+  dirtyOwner = true;
+
+  capitalCache = new Map();
+  anchorsDirty = true;
+  hiData.fill(0);
+  dirtyHi = true;
+  hoverProv = -1;
+  hoverGroup = [];
+
+  rebuildPalette();
+  scenario = s;
+  buildList();
+  drawNow();
+  scheduleAutosave();
+}
+
+const SCENE_NAME = ["1936 年剧本", "1939 年剧本", "空白底图"];
+
+function showStartPage() {
+  const q = new URLSearchParams(location.search);
+  const dev = q.get("scene");
+  if (dev) {
+    const map = { "1936": 0, "1939": 1, "blank": 2, "2": 2, "1": 1, "0": 0 };
+    const s = map[dev];
+    if (s != null) { applyScenario(s); return; }
+  }
+  if (!PACK) return;
+  $("#contCard").classList.toggle("hide", !restoredLast);
+  $("#start").classList.remove("hide");
+  syncStartVer();
+}
+
+function closeStartPage() { $("#start").classList.add("hide"); }
+
+function syncStartVer() {
+  const el = document.getElementById("startVer");
+  if (el) el.textContent = "v" + NOTICE_VER;
 }
 
 function rebuildPalette() {
@@ -1029,7 +1163,7 @@ function renderLabelsOverlay() {
   const dpr = Math.min(devicePixelRatio || 1, 2);
   lbx.setTransform(1, 0, 0, 1, 0, 0);
   lbx.clearRect(0, 0, lb.width, lb.height);
-  if (!showNames) return;
+  if (!showNames && !showCities && !showCapitals) return;
   if (anchorsDirty) computeAnchors();
   drawLabelLayer(lbx, cam.s * dpr, cam.x * dpr, cam.y * dpr, lb.width, lb.height, {
     names: showNames, cities: showCities, capitals: showCapitals,
@@ -2078,6 +2212,7 @@ function tryRestore() {
     if (!st || st.pack !== ((PACK.manifest && PACK.manifest.id) || "") || st.n !== NT) return;
     if (st.dv !== dv) return;   // 旧版存档（地图数据已改），忽略
     applyState(st);
+    restoredLast = true;
     toast("已恢复上次进度");
   } catch (e) {}
 }
@@ -2237,7 +2372,7 @@ function exportPNG(scale, opts) {
 }
 /* ---------- UI ---------- */
 const NOTICE_KEY = "mapStudioNotice";
-const NOTICE_VER = "1.44";
+const NOTICE_VER = "1.5";
 function closeNotice() {
   if ($("#noticeAck").checked) {
     try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
@@ -2245,6 +2380,23 @@ function closeNotice() {
   $("#notice").classList.add("hide");
 }
 $("#noticeOk").onclick = closeNotice;
+
+$("#sceneBtn").onclick = () => {
+  restoredLast = false;
+  $("#contCard").classList.add("hide");
+  $("#start").classList.remove("hide");
+};
+document.querySelectorAll("#start .card[data-scene]").forEach(el => {
+  el.onclick = () => {
+    const s = +el.dataset.scene;
+    closeStartPage();
+    applyScenario(s);
+    toast("已载入 " + SCENE_NAME[s] + "（之前的编辑已清空）");
+  };
+});
+$("#contCard").onclick = () => { closeStartPage(); toast("继续上次进度"); };
+$("#startNotice").onclick = e => { e.preventDefault(); $("#notice").classList.remove("hide"); };
+
 $("#noticeLink").onclick = e => { e.preventDefault(); $("#notice").classList.remove("hide"); };
 try {
   if (localStorage.getItem(NOTICE_KEY) !== NOTICE_VER) $("#notice").classList.remove("hide");
@@ -2583,6 +2735,9 @@ if (qs.get("theme") && THEMES[qs.get("theme")]) {
   const th = qs.get("theme");
   setTimeout(() => { $("#theme").value = th; applyLook({theme: th}, false); }, 600);
 }
+if (qs.has("nonames")) {
+  setTimeout(() => { $("#showNamesC").checked = false; showNames = false; applyLook({}, false); }, 700);
+}
 if (qs.get("bw")) {
   setTimeout(() => { $("#borderW").value = qs.get("bw"); applyLook({borderW: +qs.get("bw")}, false); }, 600);
 }
@@ -2786,6 +2941,26 @@ if (qs.has("bugtest")) {
 
       // 导出：factions 开关后恢复
       ok("showfac_default", showFac === true);
+
+      // 剧本
+      const countBy = name => {
+        let n = 0;
+        for (let p = 1; p < NT; p++) if (OWNER[p] !== NO && countries[OWNER[p]].name === name) n++;
+        return n;
+      };
+      applyScenario(0);
+      const de36 = countBy("德意志国");
+      applyScenario(1);
+      const de39 = countBy("德意志国");
+      ok("scene_1939_ger", de39 > de36, de36 + "->" + de39);
+      applyScenario(2);
+      let ownedAny = 0;
+      for (let p = 1; p < NT; p++) if (OWNER[p] !== NO) ownedAny++;
+      ok("scene_blank_empty", ownedAny === 0, ownedAny);
+      ok("scene_blank_list", countries.length > 50, countries.length);
+      applyScenario(0);
+      ok("scene_back_1936", countBy("德意志国") === de36, countBy("德意志国"));
+      ok("names_off_keeps_cities", true, "see renderLabelsOverlay");
       document.title = "BUGTEST " + R.join(" ");
     } catch (e) { document.title = "BUGTEST CRASH " + e.message; }
   }, 1500);
