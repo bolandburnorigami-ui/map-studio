@@ -1,0 +1,22 @@
+# 游戏数据与生成物，不要提交
+*.pdxmap
+*.bmp
+*.dds
+
+# 构建产物
+map-studio.html
+地图工坊.html
+dist/
+publish/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

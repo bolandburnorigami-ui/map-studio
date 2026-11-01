@@ -1,0 +1,2782 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>地图工坊</title>
+<style>
+  :root{
+    --bg:#0d1014; --panel:#151a21; --panel2:#1b222b; --line:#28313d;
+    --text:#dfe6ef; --dim:#8e9bab; --faint:#616e7e;
+    --gold:#c9a227; --accent:#4a9eda; --danger:#c4553f; --ok:#5aa469;
+    --ui-font:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    --radius:8px;
+    --sb-track:#12171d; --sb-thumb:#2c3644;
+  }
+
+  /* ---- 羊皮卷 ---- */
+  html[data-theme="paper"]{
+    --bg:#e8ddc6; --panel:#f4ecda; --panel2:#e9dec7; --line:#c8b48d;
+    --text:#3d3122; --dim:#6f5c42; --faint:#91805f;
+    --gold:#8a6320; --accent:#7d6a3a; --danger:#a8442f; --ok:#4f7a45;
+    --ui-font:"Songti SC","SimSun",Georgia,serif;
+    --sb-track:#e7dcc6; --sb-thumb:#c2ab84;
+  }
+  html[data-theme="paper"] body{background-image:radial-gradient(circle at 20% 10%,rgba(255,255,255,.35),transparent 60%)}
+  html[data-theme="paper"] .ph h1 span{color:#8a6320}
+  html[data-theme="paper"] #panel{box-shadow:inset -12px 0 24px rgba(120,90,50,.10)}
+
+  /* ---- 夜间（TNO 风）---- */
+  html[data-theme="night"]{
+    --bg:#05070a; --panel:#0a1017; --panel2:#0f1720; --line:#1c2b3a;
+    --text:#cfe6f2; --dim:#7e9cb2; --faint:#4a6275;
+    --gold:#e0a13a; --accent:#2fb6c9; --danger:#d4564a; --ok:#3f9c74;
+    --ui-font:"Bahnschrift","Microsoft YaHei",system-ui,sans-serif;
+    --sb-track:#070d12; --sb-thumb:#1d3a4c;
+  }
+  html[data-theme="night"] .lbl{letter-spacing:1.4px;text-transform:uppercase;color:#5f7d92}
+  html[data-theme="night"] .ph h1{letter-spacing:2px}
+  html[data-theme="night"] .ph h1 span{color:#2fb6c9}
+  html[data-theme="night"] #panel{border-right:1px solid #16364a;box-shadow:inset -1px 0 0 #0e2b3c}
+  html[data-theme="night"] .btn.on,html[data-theme="night"] .seg button.on{border-color:#2fb6c9;color:#2fb6c9}
+  html[data-theme="night"] #hud{background:rgba(5,7,10,.9);border-top-color:#16364a}
+
+  /* ---- 早期 Windows ---- */
+  html[data-theme="win95"]{
+    --bg:#c0c0c0; --panel:#c0c0c0; --panel2:#d4d0c8; --line:#808080;
+    --text:#000; --dim:#404040; --faint:#666;
+    --gold:#000080; --accent:#000080; --danger:#800000; --ok:#008000;
+    --ui-font:"MS Sans Serif",Tahoma,"Microsoft YaHei",sans-serif;
+    --radius:0px;
+    --sb-track:#c0c0c0; --sb-thumb:#808080;
+  }
+  html[data-theme="win95"] #panel{border-right:2px solid #808080;box-shadow:inset -2px 0 0 #fff}
+  html[data-theme="win95"] .ph,html[data-theme="win95"] .sec{border-bottom:1px solid #808080;box-shadow:0 1px 0 #fff}
+  html[data-theme="win95"] .ph h1{font-size:13px}
+  html[data-theme="win95"] .ph h1 span{color:#000080}
+  html[data-theme="win95"] button.btn,
+  html[data-theme="win95"] .seg button,
+  html[data-theme="win95"] .cty,
+  html[data-theme="win95"] .nav{background:#c0c0c0;border:2px outset #fff;border-radius:0;color:#000}
+  html[data-theme="win95"] button.btn:active,
+  html[data-theme="win95"] .seg button.on{background:#c0c0c0;border:2px inset #fff;color:#000}
+  html[data-theme="win95"] .cty.on{background:#000080;color:#fff}
+  html[data-theme="win95"] .cty.on .ct{color:#c0c0c0}
+  html[data-theme="win95"] input[type=text],html[data-theme="win95"] select{background:#fff;border:2px inset #fff;border-radius:0;color:#000}
+  html[data-theme="win95"] #hud{background:#c0c0c0;border-top:2px solid #fff;color:#000}
+  html[data-theme="win95"] #hud b{color:#000}
+  html[data-theme="win95"] .box{border:2px outset #fff;border-radius:0;background:#c0c0c0}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+    font:13px/1.5 var(--ui-font)}
+  #stage{position:absolute;inset:0 0 0 286px}
+  canvas{display:block;width:100%;height:100%;cursor:crosshair}
+  #lb{position:absolute;inset:0;pointer-events:none;cursor:default}
+  #panel{position:absolute;top:0;left:0;bottom:0;width:286px;background:var(--panel);
+    border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:10;overflow-y:auto;overflow-x:hidden}
+  #panel,#countries,#notice .nbody{scrollbar-color:var(--sb-thumb) var(--sb-track)}
+  #panel::-webkit-scrollbar,#countries::-webkit-scrollbar,#notice .nbody::-webkit-scrollbar{width:9px}
+  #panel::-webkit-scrollbar-track,#countries::-webkit-scrollbar-track,#notice .nbody::-webkit-scrollbar-track{background:var(--sb-track)}
+  #panel::-webkit-scrollbar-thumb,#countries::-webkit-scrollbar-thumb,#notice .nbody::-webkit-scrollbar-thumb{
+    background:var(--sb-thumb);border-radius:5px;border:2px solid var(--sb-track)}
+  .ph{padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+  .ph h1{margin:0;font-size:14px;font-weight:600;letter-spacing:.5px}
+  .ph h1 span{color:var(--gold)}
+  .sub{margin-top:3px;color:var(--faint);font-size:11px}
+  .sec{padding:11px 14px;border-bottom:1px solid var(--line)}
+  .lbl{color:var(--dim);font-size:11px;letter-spacing:.4px;margin-bottom:7px}
+  .seg{display:flex;gap:4px}
+  .seg button{flex:1;padding:6px 0;background:var(--panel2);color:var(--dim);
+    border:1px solid var(--line);border-radius:6px;cursor:pointer;font-size:12px}
+  .seg button:hover{color:var(--text)}
+  .seg button.on{background:#2a3543;color:var(--gold);border-color:var(--gold)}
+  .row{display:flex;gap:6px;align-items:center}
+  #tools button.btn{padding:6px 4px;font-size:11.5px}
+  #panel select{background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    border-radius:5px;padding:4px 6px;font-size:12px}
+  #panel input[type=range]{accent-color:var(--gold);margin:0}
+  button.btn{padding:6px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    border-radius:6px;cursor:pointer;font-size:12px}
+  button.btn:hover{border-color:#3b4757;background:#222b36}
+  button.btn:disabled{opacity:.35;cursor:default}
+  button.btn.gold{color:var(--gold);border-color:#4a3f18}
+  button.btn.on{background:#2a3543;color:var(--gold);border-color:var(--gold)}
+  button.btn.wide{width:100%}
+  #countries{flex:1 0 160px;overflow-y:auto;padding:6px 8px}
+
+  .cty{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:6px;cursor:pointer;
+    border:1px solid transparent}
+  .cty:hover{background:#1b232d}
+  .cty.on{background:#232d3a;border-color:#3b4757}
+  .sw{width:13px;height:13px;border-radius:3px;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.18)}
+  .cty .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cty .ct{color:var(--faint);font-size:10.5px;font-variant-numeric:tabular-nums}
+  #hud{position:absolute;left:286px;right:0;bottom:0;height:30px;display:flex;align-items:center;
+    gap:16px;padding:0 14px;background:var(--panel);border-top:1px solid var(--line);
+    color:var(--faint);font-size:11.5px}
+  #hud b{color:var(--text);font-weight:500}
+  #hud .k{color:var(--faint)}
+  #drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);z-index:20;flex-direction:column;gap:14px;text-align:center}
+  #drop.hide{display:none}
+  #drop h2{margin:0;font-size:17px;font-weight:600}
+  #drop p{margin:0;color:var(--dim);font-size:12.5px;max-width:420px;line-height:1.8}
+  #drop .big{color:var(--gold);font-size:12px}
+  #notice{position:absolute;inset:0;background:color-mix(in srgb, var(--bg) 78%, transparent);display:flex;align-items:center;
+    justify-content:center;z-index:60;backdrop-filter:blur(4px)}
+  #notice.hide{display:none}
+  #notice .box{width:540px;max-width:calc(100vw - 48px);max-height:78vh;display:flex;flex-direction:column}
+  #notice .nbody{overflow-y:auto;font-size:12.5px;line-height:1.9;color:var(--dim);padding-right:6px;margin-bottom:4px}
+  #notice .nbody b{color:var(--text);font-weight:600}
+  #notice .nbody p{margin:0 0 9px}
+  #notice .nbody ol{margin:0 0 9px;padding-left:18px}
+  #notice .nbody li{margin-bottom:6px}
+  #notice .nfoot{display:flex;align-items:center;gap:10px;margin-top:12px}
+  #notice .nfoot label{color:var(--dim);font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer}
+  #modal{position:absolute;inset:0;background:color-mix(in srgb, var(--bg) 72%, transparent);display:flex;align-items:center;
+    justify-content:center;z-index:40;backdrop-filter:blur(3px)}
+  #modal.hide{display:none}
+  .box{width:352px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:18px 18px 14px;box-shadow:0 24px 70px rgba(0,0,0,.65)}
+  .box h3{margin:0 0 14px;font-size:14px;font-weight:600;letter-spacing:.4px}
+  .box .f{display:block;margin-bottom:11px;font-size:12px;color:var(--dim)}
+  .box .f > input[type=text]{display:block;width:100%;margin-top:5px;background:var(--panel2);
+    color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px}
+  .box .f.cb{display:flex;align-items:center;gap:8px;color:var(--text)}
+  .box input[type=checkbox]{accent-color:var(--gold);width:14px;height:14px}
+  .box select{background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    border-radius:6px;padding:5px 7px;font-size:12px;margin-left:6px}
+  .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  #errbar{position:absolute;left:286px;right:0;top:0;display:none;align-items:center;gap:10px;
+    padding:7px 12px;background:#3a1d1a;border-bottom:1px solid #6b2f28;color:#f0c9c2;
+    font-size:12px;z-index:35}
+  #errbar b{color:#ff9d8a;flex:none}
+  #errbar span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #errbar button{background:transparent;border:1px solid #6b2f28;color:#f0c9c2;border-radius:5px;
+    padding:2px 8px;cursor:pointer;font-size:11px;flex:none}
+  #toast{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);background:var(--panel2);
+    border:1px solid var(--line);padding:8px 14px;border-radius:var(--radius);font-size:12px;opacity:0;
+    transition:opacity .2s;pointer-events:none;z-index:30}
+  #toast.on{opacity:1}
+  .mini{font-size:11px;color:var(--faint);line-height:1.7}
+  .chip{display:inline-block;padding:2px 8px;margin:0 4px 4px 0;background:var(--panel2);
+    border:1px solid var(--line);border-radius:10px;font-size:11px;color:#b9c4d1;
+    cursor:pointer}
+  .chip:hover{border-color:var(--danger);color:var(--text)}
+  .kbd{display:inline-block;padding:0 5px;border:1px solid var(--line);border-radius:4px;
+    background:#1b222b;color:var(--dim);font-size:10.5px;line-height:16px}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas><canvas id="lb"></canvas></div>
+
+<div id="panel">
+  <div class="ph">
+    <h1>地图<span>工坊</span></h1>
+    <div class="sub" id="packName">未载入</div>
+  </div>
+
+  <div class="sec">
+    <div class="lbl">笔刷粒度</div>
+    <div class="seg" id="gran">
+      <button data-g="prov">省份</button>
+      <button data-g="state" class="on">州</button>
+      <button data-g="sr">战略区</button>
+    </div>
+  </div>
+
+  <div class="sec" style="padding-top:9px;padding-bottom:9px">
+    <div class="row">
+      <span class="lbl" style="margin:0;flex:none">字号</span>
+      <input type="range" id="fontScale" min="55" max="175" step="5" value="100" style="flex:1;min-width:0;accent-color:var(--gold);margin:0">
+      <span id="fsVal" style="color:var(--gold);font-size:11px;width:34px;text-align:right;font-variant-numeric:tabular-nums">100%</span>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="row" id="tools">
+      <button class="btn" id="undo" disabled>撤销</button>
+      <button class="btn" id="redo" disabled>重做</button>
+      <button class="btn" id="pick">吸管</button>
+      <button class="btn" id="eraser">橡皮</button>
+      <button class="btn" id="fit">复位</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lbl">外观</div>
+    <div class="row" style="margin-bottom:7px">
+      <span class="mini" style="flex:none;width:34px">主题</span>
+      <select id="theme" style="flex:1;min-width:0">
+        <option value="default">原版</option>
+        <option value="muted">低饱和</option>
+        <option value="paper">羊皮卷</option>
+        <option value="night">夜间（TNO）</option>
+        <option value="win95">早期 Windows</option>
+      </select>
+    </div>
+    <div class="row" style="margin-bottom:5px">
+      <span class="mini" style="flex:none;width:34px">省界</span>
+      <input type="range" id="provB" min="0" max="100" value="100" style="flex:1;min-width:0">
+    </div>
+    <div class="row" style="margin-bottom:5px">
+      <span class="mini" style="flex:none;width:34px">地形</span>
+      <input type="range" id="terrAmt" min="0" max="100" value="100" style="flex:1;min-width:0">
+    </div>
+    <label class="row" style="font-size:12px;color:var(--dim);cursor:pointer;margin-bottom:6px">
+      <input type="checkbox" id="stateB" style="accent-color:var(--gold)"> 显示州界
+    </label>
+    <div class="row" style="gap:9px;font-size:12px;color:var(--dim)">
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="showNamesC" checked style="accent-color:var(--gold)">国名</label>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="showCitiesC" checked style="accent-color:var(--gold)">城市</label>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="showCapitalsC" checked style="accent-color:var(--gold)">首都</label>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lbl">国家 / 阵营</div>
+    <div class="seg" id="tabs" style="margin-bottom:8px">
+      <button data-t="cty" class="on">国家</button>
+      <button data-t="fac">阵营</button>
+      <button data-t="zone">范围</button>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="btn wide" id="addCty">＋ 新建国家</button>
+      <button class="btn wide" id="addFac" style="display:none">＋ 新建阵营</button>
+      <button class="btn wide" id="addZone" style="display:none">＋ 新建范围</button>
+    </div>
+    <div class="row" id="editRow" style="display:none">
+      <input type="color" id="pickColor" style="width:30px;height:26px;padding:0;border:1px solid var(--line);background:var(--panel2);border-radius:5px;cursor:pointer">
+      <input type="text" id="editName" style="flex:1;min-width:0;background:var(--panel2);color:var(--text);
+        border:1px solid var(--line);border-radius:5px;padding:5px 7px;font-size:12px">
+    </div>
+    <div class="row" id="capRow" style="display:none;margin-top:6px">
+      <button class="btn" id="setCapital" style="flex:1">迁都（点地图选省）</button>
+      <button class="btn" id="delEnt" title="删除">✕</button>
+    </div>
+    <div id="facMembers" style="display:none;margin-top:8px"></div>
+
+    <div class="row" id="facRow" style="display:none;margin-top:6px">
+      <span style="color:var(--dim);font-size:11.5px;flex:none">所属阵营</span>
+      <select id="facSel" style="flex:1;min-width:0;background:var(--panel2);color:var(--text);
+        border:1px solid var(--line);border-radius:5px;padding:4px 6px;font-size:12px"></select>
+    </div>    <div class="row" style="margin-top:8px">
+      <input id="search" type="text" placeholder="搜索名称…" style="flex:1;min-width:0;background:var(--panel2);color:var(--text);
+        border:1px solid var(--line);border-radius:5px;padding:5px 8px;font-size:12px">
+    </div>
+  </div>
+
+  <div id="countries"></div>
+
+  <div class="sec" style="border-top:1px solid var(--line);border-bottom:none">
+    <div class="row" style="margin-bottom:6px">
+      <button class="btn wide gold" id="export">导出 PNG</button>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <button class="btn" id="saveFile" style="flex:1">保存</button>
+      <button class="btn" id="loadFile" style="flex:1">读取</button>
+      <button class="btn" id="resetAll" style="flex:1">清空</button>
+    </div>
+    <div class="mini">
+      滚轮缩放 · 右键拖动平移 · <span class="kbd">Alt</span>+左键吸色<br>
+      涂抹给国家上色 · <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> 撤销 · <a href="#" id="noticeLink" style="color:var(--faint)">声明</a>
+    </div>
+  </div>
+</div>
+
+<div id="hud">
+  <span><span class="k">省份</span> <b id="hProv">—</b></span>
+  <span><span class="k">州</span> <b id="hState">—</b></span>
+  <span><span class="k">归属</span> <b id="hOwner">—</b></span>
+  <span><span class="k">笔刷</span> <b id="hBrush">—</b></span>
+  <span style="margin-left:auto"><span class="k">缩放</span> <b id="hZoom">—</b></span>
+</div>
+
+<div id="errbar"><b>出错了</b><span id="errmsg"></span><button id="errcopy">复制</button><button id="errdel">关闭</button></div>
+
+<div id="toast"></div>
+
+<div id="notice" class="hide">
+  <div class="box">
+    <h3>注意与声明</h3>
+    <div class="nbody">
+      <p>这是一个<b>离线的地图编辑工具</b>，用来给国家、阵营、势力范围涂色并导出成图片，不是游戏 mod 编辑器。</p>
+      <ol>
+        <li><b>素材版权</b>：底图、地名、国家颜色来自《Hearts of Iron IV》原版游戏文件，版权归 Paradox Interactive。仅供个人学习、地图创作与同好交流，<b>请勿商业使用</b>，也不要把它单独提取出来二次分发。</li>
+        <li><b>边界说明</b>：图上对藏南、阿克赛钦一带的处理（如 5042 号省划入和阗）是按使用者要求做的自定义修改，<b>不代表游戏原版设定</b>。</li>
+        <li><b>隐私</b>：所有编辑只保存在你自己浏览器的本地存储里，工具不联网、不上传任何数据。</li>
+        <li><b>浏览器</b>：请用 Microsoft Edge 或 Chrome 打开。微信、QQ、搜狗等内置浏览器内核较旧，可能白屏。</li>
+      </ol>
+      <p style="color:var(--faint)">v1.42 · 由 DeepSeek Harness 协助编写</p>
+    </div>
+    <div class="nfoot">
+      <label><input type="checkbox" id="noticeAck"> 不再提示</label>
+      <span style="flex:1"></span>
+      <button class="btn gold" id="noticeOk">我知道了</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal" class="hide">
+  <div class="box">
+    <h3>导出图幅</h3>
+    <label class="f">标题
+      <input type="text" id="exTitle" value="世界地图 · 1936">
+    </label>
+    <label class="f cb"><input type="checkbox" id="exNames" checked> 国名标注</label>
+    <label class="f cb"><input type="checkbox" id="exCities" checked> 城市与首都</label>
+    <label class="f cb"><input type="checkbox" id="exFac" checked> 阵营边框 / 范围底色</label>
+    <label class="f cb"><input type="checkbox" id="exLegend" checked> 图例</label>
+    <label class="f">倍率
+      <select id="exScale">
+        <option value="1">1× · 5632 × 2048</option>
+        <option value="2">2× · 11264 × 4096</option>
+      </select>
+    </label>
+    <div class="acts">
+      <button class="btn" id="exCancel">取消</button>
+      <button class="btn gold" id="exGo">导出</button>
+    </div>
+  </div>
+</div>
+
+<div id="drop">
+  <h2>拖入地图数据包</h2>
+  <p>把 <b>.pdxmap</b> 文件拖到这里，或点下面的按钮选择。<br>
+     <span class="big">world-1936.pdxmap</span> 自带 13414 个省份、1081 个州和地形底图。</p>
+  <button class="btn gold" id="open">选择文件</button>
+  <input type="file" id="file" accept=".pdxmap,.zip" style="display:none">
+  <input type="file" id="stateFile" accept=".json,application/json" style="display:none">
+</div>
+
+<script id="vs" type="x-shader/x-vertex">#version 300 es
+void main(){
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}
+</script>
+
+<script id="fs" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+precision highp int;
+precision highp usampler2D;
+
+uniform usampler2D uProv;    // 每像素省份号
+uniform usampler2D uOwner;   // 每省归属槽位
+uniform usampler2D uHi;      // 每省高亮标记
+uniform sampler2D  uPal;     // 每省颜色（alpha = 是否陆地）
+uniform usampler2D uFac;     // 每省阵营号（0 = 无）
+uniform sampler2D  uFacPal;  // 阵营颜色
+uniform usampler2D uState;   // 每省所属州（用来画州界）
+uniform usampler2D uZone;    // 每省势力范围号（0 = 无）
+uniform sampler2D  uZonePal; // 势力范围颜色
+uniform sampler2D  uTerr;    // 地形底图
+uniform vec2  uScreen;
+uniform vec2  uOffset;
+uniform vec2  uSize;
+uniform float uScale;
+uniform int   uDbg;
+uniform float uFacOn;
+uniform float uProvB;    // 省界强度
+uniform float uStateB;   // 州界开关
+uniform float uSat;      // 饱和度
+uniform float uTerrAmt;  // 地形强度
+uniform vec3  uTint;     // 主题色调
+uniform vec3  uBg;       // 画布底色
+uniform vec3  uSea;      // 主题海面色
+uniform float uSeaMix;   // 海面覆盖程度
+uniform float uLift;     // 整体提亮
+uniform vec3  uCBorder;  // 国界颜色
+uniform float uCMix;     // 国界浓度
+
+out vec4 frag;
+
+const int LUT_W = 128;
+vec4 palOf(uint idx)  { ivec2 p = ivec2(int(idx) % LUT_W, int(idx) / LUT_W); return texelFetch(uPal, p, 0); }
+uint ownOf(uint idx)  { ivec2 p = ivec2(int(idx) % LUT_W, int(idx) / LUT_W); return texelFetch(uOwner, p, 0).r; }
+uint hiOf(uint idx)   { ivec2 p = ivec2(int(idx) % LUT_W, int(idx) / LUT_W); return texelFetch(uHi, p, 0).r; }
+uint facOf(uint idx)  { ivec2 p = ivec2(int(idx) % LUT_W, int(idx) / LUT_W); return texelFetch(uFac, p, 0).r; }
+uint stOf(uint idx)   { ivec2 p = ivec2(int(idx) % LUT_W, int(idx) / LUT_W); return texelFetch(uState, p, 0).r; }
+uint zoneOf(uint idx) { ivec2 p = ivec2(int(idx) % LUT_W, int(idx) / LUT_W); return texelFetch(uZone, p, 0).r; }
+
+void main(){
+  if (uDbg == 5) { frag = vec4(1.0, 0.0, 1.0, 1.0); return; }
+  float sy = uScreen.y - gl_FragCoord.y;
+  vec2 mp = (vec2(gl_FragCoord.x, sy) - uOffset) / uScale;
+  if (mp.x < 0.0 || mp.y < 0.0 || mp.x >= uSize.x || mp.y >= uSize.y) {
+    frag = vec4(uBg, 1.0);
+    return;
+  }
+  ivec2 ip = ivec2(mp);
+  ivec2 mx = ivec2(int(uSize.x) - 1, int(uSize.y) - 1);
+  uint id = texelFetch(uProv, ip, 0).r;
+
+  vec3 terr = texture(uTerr, mp / uSize).rgb;
+  vec4 p0 = palOf(id);
+  if (uDbg == 1) { frag = vec4(float(id) / 13414.0, 0.0, 0.0, 1.0); return; }
+  if (uDbg == 2) { frag = vec4(p0.rgb, 1.0); return; }
+  if (uDbg == 3) { frag = vec4(palOf(0u).rgb, 1.0); return; }
+  if (uDbg == 4) { frag = vec4(float(ownOf(id)) / 101.0, 0.0, float(p0.a), 1.0); return; }
+  bool water0 = p0.a < 0.5;
+
+  float lum = dot(terr, vec3(0.299, 0.587, 0.114));
+  float k = clamp(mix(1.0, 0.86 + 1.05 * (lum - 0.45), uTerrAmt), 0.68, 1.06);
+  vec3 col = water0 ? terr : clamp(p0.rgb * k + terr * (0.16 * uTerrAmt), 0.0, 1.0);
+
+  // 主题：饱和度 + 色调 + 海面
+  float lg = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(lg), col, uSat) * uTint;
+  if (water0 && uSeaMix > 0.0) col = mix(col, uSea, uSeaMix);
+  col = clamp(col + uLift, 0.0, 1.0);
+
+  // 阵营：只记颜色，不做填充（靠分界描边体现）
+  uint fac = water0 ? 0u : facOf(id);
+  vec3 fcol = vec3(0.0);
+  if (fac > 0u) fcol = texelFetch(uFacPal, ivec2(int(fac), 0), 0).rgb;
+
+  // 势力范围：半透明色块
+  uint zn = water0 ? 0u : zoneOf(id);
+  vec3 zcol = vec3(0.0);
+  if (zn > 0u && uFacOn > 0.5) {
+    zcol = texelFetch(uZonePal, ivec2(int(zn), 0), 0).rgb;
+    col = mix(col, zcol, 0.34);
+  }
+
+  // 边界：按屏幕像素折算采样半径，缩小时线也不会消失
+  int r = int(max(1.0, 1.0 / uScale));
+  uint ow0 = ownOf(id);
+  bool anyDiff = false, countryDiff = false, coast = false, fdiff = false, zdiff = false, sdiff = false;
+  for (int i = 0; i < 4; i++) {
+    ivec2 o = ivec2((i == 0) ? -r : (i == 1) ? r : 0, (i == 2) ? -r : (i == 3) ? r : 0);
+    ivec2 q = clamp(ip + o, ivec2(0), mx);
+    uint n = texelFetch(uProv, q, 0).r;
+    if (n == id) continue;
+    anyDiff = true;
+    vec4 pn = palOf(n);
+    if ((pn.a < 0.5) != water0) coast = true;
+    else if (!water0 && ownOf(n) != ow0) countryDiff = true;
+    if (!water0 && facOf(n) != fac && fac > 0u) fdiff = true;
+    if (!water0 && zoneOf(n) != zn) zdiff = true;
+    if (!water0 && stOf(n) != stOf(id)) sdiff = true;
+  }
+  if (coast) col *= 0.66;
+  if (countryDiff) {
+    if (fdiff) col = mix(fcol, vec3(0.04, 0.05, 0.06), 0.18);   // 阵营分界：彩色描边
+    else col = mix(col, uCBorder, uCMix);
+  } else if (anyDiff && !water0) col *= mix(1.0, 0.82, uProvB);
+  if (!countryDiff && sdiff && uStateB > 0.5) col *= 0.66;
+  if (zdiff) col = mix(col, zcol * 0.5, 0.8);                  // 势力范围边界
+
+  if (hiOf(id) > 0u) {
+    col = mix(col, vec3(1.0), 0.22);
+  }
+  frag = vec4(col, 1.0);
+}
+</script>
+
+<script>
+"use strict";
+/* ============================================================
+   地图工坊 M1 —— 载入 .pdxmap、WebGL 渲染、按区域涂色、导出 PNG
+   ============================================================ */
+
+const NO = 65535;
+const LUT_W = 128;
+let W = 5632, H = 2048, NT = 13414;
+let LUT_H = Math.ceil(NT / LUT_W), LUT_N = LUT_W * LUT_H;
+
+function setDims(w, h, n) {
+  W = w; H = h; NT = n;
+  LUT_H = Math.ceil(n / LUT_W);
+  LUT_N = LUT_W * LUT_H;
+}
+const $ = s => document.querySelector(s);
+window.addEventListener("error", e => { const el = document.getElementById("packName"); if (el) el.textContent = "错误：" + e.message; document.title = "ERR " + e.message; });
+window.addEventListener("unhandledrejection", e => { const r = e.reason, m = (r && r.message) || r; const el = document.getElementById("packName"); if (el) el.textContent = "错误：" + m; document.title = "REJ " + m; });
+const cv = $("#cv");
+let gl = null;
+try { gl = cv.getContext("webgl2", {antialias: false, alpha: false, preserveDrawingBuffer: true}); } catch (e) {}
+
+/* 出错时把原因摆到屏幕上，别只留白屏 */
+let lastError = "";
+function showError(msg) {
+  lastError = String(msg || "未知错误");
+  const bar = document.getElementById("errbar");
+  if (!bar) return;
+  document.getElementById("errmsg").textContent = lastError;
+  bar.style.display = "flex";
+}
+function fatal(msg) {
+  showError(msg);
+  const d = document.getElementById("drop");
+  if (d) {
+    d.classList.remove("hide");
+    d.innerHTML = '<h2>打不开</h2><p style="max-width:520px;line-height:1.9">' + msg +
+      '<br><br>建议：用新版 Microsoft Edge 或 Chrome 打开这个文件。</p>';
+  }
+}
+window.addEventListener("error", e => showError("脚本错误：" + (e.message || e.type)));
+window.addEventListener("unhandledrejection", e => {
+  const r = e.reason;
+  showError("异步错误：" + ((r && r.message) || r));
+});
+const lb = $("#lb"), lbx = lb.getContext("2d");
+let showNames = true, showCities = true, showCapitals = true;
+
+/* 外观设置 */
+const UI_DEFAULT = {
+  text: "#f7f3e6", halo: "rgba(8,11,16,0.82)",
+  capFill: "#f0c95c", capLine: "rgba(28,22,10,0.92)", capShadow: "rgba(0,0,0,0.5)",
+  dot: "#f4f7fa", dotRing: "rgba(12,16,22,0.9)",
+  capScale: 1, dotScale: 1,
+  legendBg: "rgba(8,11,16,0.84)", legendText: "#dfe6ef", legendRule: "rgba(201,162,39,0.35)",
+  title: "#efe4c6", titleRule: "rgba(201,162,39,0.55)"
+};
+const THEMES = {
+  default: {sat: 1.00, tint: [1.00, 1.00, 1.00], bg: [0.043, 0.055, 0.071], sea: [0, 0, 0], seaMix: 0, lift: 0,
+            border: [0.03, 0.04, 0.05], borderMix: 0.64, ui: UI_DEFAULT},
+  muted:   {sat: 0.72, tint: [1.02, 1.00, 0.96], bg: [0.050, 0.060, 0.072], sea: [0, 0, 0], seaMix: 0, lift: 0,
+            border: [0.08, 0.08, 0.08], borderMix: 0.58, ui: UI_DEFAULT},
+  paper:   {sat: 0.42, tint: [1.14, 1.05, 0.86], bg: [0.909, 0.867, 0.776], sea: [0.74, 0.77, 0.73], seaMix: 0.92, lift: 0.055,
+            border: [0.26, 0.17, 0.08], borderMix: 0.72,
+            ui: {text: "#2e2416", halo: "rgba(246,239,224,0.92)",
+                 capFill: "#8a3a1c", capLine: "rgba(252,246,232,0.95)", capShadow: "rgba(90,60,20,0.4)",
+                 dot: "#3b2f22", dotRing: "rgba(246,239,224,0.92)",
+                 capScale: 0.92, dotScale: 0.9,
+                 legendBg: "rgba(243,236,221,0.94)", legendText: "#3b2f22", legendRule: "rgba(120,88,40,0.4)",
+                 title: "#4a3a22", titleRule: "rgba(120,88,40,0.55)"}},
+  night:   {sat: 0.50, tint: [0.72, 0.82, 1.04], bg: [0.020, 0.028, 0.040], sea: [0.02, 0.05, 0.09], seaMix: 0.55, lift: 0,
+            border: [0.04, 0.09, 0.13], borderMix: 0.7,
+            ui: {text: "#d9f1ff", halo: "rgba(2,8,14,0.9)",
+                 capFill: "#e8b040", capLine: "rgba(4,10,16,0.92)", capShadow: "rgba(0,0,0,0.6)",
+                 dot: "#9fd8e8", dotRing: "rgba(2,8,14,0.9)",
+                 capScale: 1, dotScale: 1,
+                 legendBg: "rgba(4,8,12,0.9)", legendText: "#bcd8e6", legendRule: "rgba(47,182,201,0.4)",
+                 title: "#8fe3f0", titleRule: "rgba(47,182,201,0.5)"}},
+  win95:   {sat: 0.90, tint: [1.00, 1.00, 1.00], bg: [0.752, 0.752, 0.752], sea: [0.36, 0.45, 0.52], seaMix: 0.45, lift: 0.02,
+            border: [0, 0, 0], borderMix: 0.78,
+            ui: {text: "#ffffff", halo: "rgba(0,0,0,0.85)",
+                 capFill: "#ffd800", capLine: "rgba(0,0,0,0.95)", capShadow: "rgba(0,0,0,0.35)",
+                 dot: "#ffffff", dotRing: "rgba(0,0,0,0.85)",
+                 capScale: 1.05, dotScale: 1,
+                 legendBg: "rgba(192,192,192,0.96)", legendText: "#000000", legendRule: "rgba(0,0,128,0.55)",
+                 title: "#000080", titleRule: "rgba(0,0,128,0.6)"}}
+};
+let look = {theme: "default", sat: 1, tint: [1, 1, 1], bg: [0.043, 0.055, 0.071],
+  sea: [0, 0, 0], seaMix: 0, lift: 0, border: [0.03, 0.04, 0.05], borderMix: 0.64,
+  ui: UI_DEFAULT, provB: 1, stateB: false, terr: 1};
+
+/* 势力：国家集团，渲染成斜纹 + 彩色边境 */
+let factions = [];
+let facOfCountry = new Uint8Array(0);   // 国家索引 -> 势力号+1（0 = 无）
+let provFacData = null;                 // 每省势力号（纹理）
+let facPalData = null;                  // 势力颜色（纹理）
+let facDirty = true, facPalDirty = true;
+let tab = "cty";
+let zones = [];
+let zoneOfProv = null;
+let zonePalData = null;
+let zoneDirty = true, zonePalDirty = true;
+let pendingCapital = false;
+let pendingPick = false;
+let searchQ = "";
+let curZone = -1;
+let showFac = true;
+let curFac = -1;
+
+let PACK = null;             // {prov, tm, titles, meta, terrainImg}
+let provId = null;           // Uint16Array W*H
+let ownerOf = null;          // Uint16Array NT  省份 -> 国家槽位
+let ownerTexData = null;     // Uint16Array NT
+let palette = null;          // Uint8Array LUT_N*4
+let hiData = null;           // Uint8Array NT
+let states = [];             // [{titleId,name,provinces:Int32Array}]
+let srs = [];
+let stateOfProv = null, provTitle = null;  // 州 title id / 省 title id
+let srOfProv = null;
+let countries = [];          // [{name,color,slot,titles:Set}]
+let cur = 0;                 // 当前国家槽位
+let gran = "state";
+let undoStack = [], redoStack = [];
+let stroke = null;           // 当前一笔 {ids:Set, prev:Map}
+let hoverProv = -1, hoverGroup = [];
+let cam = {x: 0, y: 0, s: 1};
+const DBG = +(new URLSearchParams(location.search).get("dbg") || 0);
+let dirtyPal = true, dirtyHi = true, dirtyOwner = false;
+let OWNER = null, water = null;
+
+/* ---------- zip ---------- */
+async function inflateRaw(raw) {
+  const ds = new DecompressionStream("deflate-raw");
+  const st = new Blob([raw]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(st).arrayBuffer());
+}
+async function inflateZlib(raw) {
+  const ds = new DecompressionStream("deflate");
+  const st = new Blob([raw]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(st).arrayBuffer());
+}
+async function unzip(buf) {
+  const dv = new DataView(buf);
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65558); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("不是有效的 .pdxmap（zip 结构异常）");
+  const n = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  const entries = {};
+  const dec = new TextDecoder();
+  for (let i = 0; i < n; i++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) throw new Error("中央目录损坏");
+    const method = dv.getUint16(off + 10, true);
+    const csize = dv.getUint32(off + 20, true);
+    const nlen = dv.getUint16(off + 28, true);
+    const elen = dv.getUint16(off + 30, true);
+    const clen = dv.getUint16(off + 32, true);
+    const lho = dv.getUint32(off + 42, true);
+    const name = dec.decode(new Uint8Array(buf, off + 46, nlen));
+    const lnlen = dv.getUint16(lho + 26, true);
+    const lelen = dv.getUint16(lho + 28, true);
+    const start = lho + 30 + lnlen + lelen;
+    entries[name] = {method, raw: new Uint8Array(buf, start, csize)};
+    off += 46 + nlen + elen + clen;
+  }
+  const out = {};
+  for (const [name, e] of Object.entries(entries)) {
+    out[name] = e.method === 0 ? e.raw : await inflateRaw(e.raw);
+  }
+  return out;
+}
+
+/* ---------- 载入 ---------- */
+async function loadPack(file) {
+  toast("正在解包…");
+  undoStack.length = 0;
+  redoStack.length = 0;
+  stroke = null;
+  curFac = -1;
+  hoverProv = -1;
+  updateUndo();
+  const buf = await file.arrayBuffer();
+  const z = await unzip(buf);
+  const dec = new TextDecoder();
+  const manifest = JSON.parse(dec.decode(z["manifest.json"]));
+  const titles = JSON.parse(dec.decode(z["titles.json"]));
+  const meta = JSON.parse(dec.decode(z["meta.json"]));
+  setDims(manifest.mapWidth || 5632, manifest.mapHeight || 2048, manifest.numProvinces || 13414);
+
+  toast("正在解码省份图…");
+  const pid = await inflateZlib(z["provinces_id.bin"]);
+  provId = new Uint16Array(pid.buffer, pid.byteOffset, W * H);
+
+  const tmb = await inflateZlib(z["titlemap.bin"]);
+  const tm = new Uint16Array(tmb.buffer, tmb.byteOffset, 6 * NT);
+
+  PACK = {manifest, titles, meta, tm};
+  if (z["cities.json"]) {
+    try { PACK.cities = JSON.parse(dec.decode(z["cities.json"])); } catch (e) { PACK.cities = null; }
+  }
+
+  // 地形底图
+  const tname = manifest.terrain || "terrain.jpg";
+  let terrainImg = null;
+  if (z[tname]) {
+    const blob = new Blob([z[tname]], {type: tname.endsWith(".png") ? "image/png" : "image/jpeg"});
+    terrainImg = await loadImage(URL.createObjectURL(blob));
+  }
+  PACK.terrainImg = terrainImg;
+
+  initWorld(tm, titles);
+  computeProvStats();
+  buildCityList();
+  initGL(terrainImg);
+  fitView();
+  const cp = new URLSearchParams(location.search).get("cam");
+  if (cp) { const a = cp.split(",").map(Number); cam = {x: a[0], y: a[1], s: a[2]}; }
+  { const z = $("#hZoom"); if (z) z.textContent = Math.round(cam.s * 100) + "%"; }
+  buildList();
+  $("#packName").textContent = (manifest.label || "地图") + " · " + W + "×" + H;
+  $("#drop").classList.add("hide");
+  drawNow();
+  tryRestore();
+  toast("载入完成");
+
+  if (new URLSearchParams(location.search).has("selftest")) runSelfTest();
+}
+
+function loadImage(url) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = url;
+  });
+}
+
+function initWorld(tm, titles) {
+  const names = titles.names, colors = titles.colors, keys = titles.keys;
+  OWNER = new Uint16Array(NT).fill(NO);
+  stateOfProv = tm.slice(4 * NT, 5 * NT);
+  stateTexData = new Uint16Array(LUT_N);
+  for (let p = 0; p < NT; p++) stateTexData[p] = stateOfProv[p] === NO ? 0 : stateOfProv[p];
+  srOfProv = tm.slice(3 * NT, 4 * NT);
+  provTitle = tm.slice(5 * NT, 6 * NT);
+
+  // 州 / 战略区 -> 省份集合
+  const mkGroups = (tierArr) => {
+    const m = new Map();
+    for (let p = 1; p < NT; p++) {
+      const t = tierArr[p];
+      if (t === NO) continue;
+      let a = m.get(t);
+      if (!a) { a = []; m.set(t, a); }
+      a.push(p);
+    }
+    return m;
+  };
+  const stMap = mkGroups(stateOfProv);
+  const srMap = mkGroups(srOfProv);
+  states = [...stMap.entries()].map(([id, arr]) => ({id, name: names[id], provinces: Int32Array.from(arr)}));
+  srs = [...srMap.entries()].map(([id, arr]) => ({id, name: names[id], provinces: Int32Array.from(arr)}));
+  STATES_BY_ID = new Map(states.map(s => [s.id, s.provinces]));
+  SRS_BY_ID = new Map(srs.map(s => [s.id, s.provinces]));
+
+  // 1936 头衔 -> 国家槽位
+  const tier0 = tm.subarray(0, NT);
+  const used = new Map();
+  for (let p = 1; p < NT; p++) {
+    const t = tier0[p];
+    if (t === NO) continue;
+    if (!used.has(t)) used.set(t, used.size);
+    OWNER[p] = used.get(t);
+  }
+  countries = [];
+  for (const [tid, slot] of used) {
+    countries.push({slot, titleId: tid, name: names[tid], color: colors[tid].slice()});
+  }
+  countries.sort((a, b) => a.name.localeCompare(b.name, "zh"));
+  // 重新编号，保证槽位连续
+  countries.forEach((c, i) => { c.slot = i; });
+  const remap = new Map();
+  for (const [tid, slot] of used) remap.set(slot, countries.find(c => c.titleId === tid).slot);
+  for (let p = 1; p < NT; p++) if (OWNER[p] !== NO) OWNER[p] = remap.get(OWNER[p]);
+
+  // 水域：空白剧本（tier 2）挂头衔的就是水
+  water = new Uint8Array(NT);
+  for (let p = 0; p < NT; p++) water[p] = tm[2 * NT + p] !== NO ? 1 : 0;
+
+  ownerTexData = new Uint16Array(LUT_N).fill(NO);
+  for (let p = 1; p < NT; p++) ownerTexData[p] = OWNER[p];
+  hiData = new Uint8Array(LUT_N);
+  palette = new Uint8Array(LUT_N * 4);
+  rebuildPalette();
+  cur = countries.findIndex(c => c.name === "德意志国");
+  if (cur < 0) cur = 0;
+
+  capitalCache = new Map();
+  factions = [];
+  facOfCountry = new Uint8Array(countries.length);
+  provFacData = new Uint8Array(LUT_N);
+  facPalData = new Uint8Array(64 * 4);
+  zones = [];
+  zoneOfProv = new Uint8Array(LUT_N);
+  zonePalData = new Uint8Array(64 * 4);
+  updateFacData();
+}
+
+function rebuildPalette() {
+  for (let p = 0; p < NT; p++) {
+    const o = palette, i = p * 4;
+    if (water[p]) { o[i] = 0; o[i + 1] = 0; o[i + 2] = 0; o[i + 3] = 0; continue; }
+    const ow = OWNER[p];
+    o[i + 3] = 255;
+    if (ow === NO) { o[i] = 122; o[i + 1] = 116; o[i + 2] = 106; continue; }
+    const c = countries[ow].color;
+    o[i] = c[0]; o[i + 1] = c[1]; o[i + 2] = c[2];
+  }
+  dirtyPal = true;
+}
+
+/* ---------- WebGL ---------- */
+let prog, tex = {}, uni = {};
+function initGL(terrainImg) {
+  if (tex.pal) {
+    for (const k of Object.keys(tex)) { try { gl.deleteTexture(tex[k]); } catch (e) {} }
+  }
+  tex = {};
+  const sh = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, $("#vs").textContent.trim()));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, $("#fs").textContent.trim()));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  for (const n of ["uProv", "uOwner", "uHi", "uPal", "uFac", "uFacPal", "uState", "uZone", "uZonePal", "uTerr", "uScreen", "uOffset", "uSize", "uScale", "uDbg", "uFacOn", "uProvB", "uStateB", "uSat", "uTerrAmt", "uTint", "uBg", "uSea", "uSeaMix", "uLift", "uCBorder", "uCMix"])
+    uni[n] = gl.getUniformLocation(prog, n);
+
+  tex.prov = mkTex(gl.R16UI, W, H, gl.RED_INTEGER, gl.UNSIGNED_SHORT, provId);
+  tex.owner = mkTex(gl.R16UI, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_SHORT, ownerTexData);
+  tex.hi = mkTex(gl.R8UI, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_BYTE, hiData);
+  tex.pal = mkTex(gl.RGBA8, LUT_W, LUT_H, gl.RGBA, gl.UNSIGNED_BYTE, palette);
+  tex.fac = mkTex(gl.R8UI, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_BYTE, provFacData || new Uint8Array(LUT_N));
+  tex.facPal = mkTex(gl.RGBA8, 64, 1, gl.RGBA, gl.UNSIGNED_BYTE, facPalData || new Uint8Array(256));
+  tex.state = mkTex(gl.R16UI, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_SHORT, stateTexData || new Uint16Array(LUT_N));
+  tex.zone = mkTex(gl.R8UI, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_BYTE, zoneOfProv || new Uint8Array(LUT_N));
+  tex.zonePal = mkTex(gl.RGBA8, 64, 1, gl.RGBA, gl.UNSIGNED_BYTE, zonePalData || new Uint8Array(256));
+  if (!terrainImg) {
+    terrainImg = document.createElement("canvas");
+    terrainImg.width = terrainImg.height = 1;
+    const c = terrainImg.getContext("2d");
+    c.fillStyle = "#7d8a6a"; c.fillRect(0, 0, 1, 1);
+  }
+  {
+    tex.terr = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex.terr);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, terrainImg);
+  }
+}
+
+function mkTex(fmt, w, h, ifmt, type, data) {
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, fmt, w, h, 0, ifmt, type, data);
+  return t;
+}
+
+function uploadIfDirty() {
+  if (dirtyPal) {
+    gl.bindTexture(gl.TEXTURE_2D, tex.pal);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, LUT_W, LUT_H, gl.RGBA, gl.UNSIGNED_BYTE, palette);
+    dirtyPal = false;
+  }
+  if (dirtyHi) {
+    gl.bindTexture(gl.TEXTURE_2D, tex.hi);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_BYTE, hiData);
+    dirtyHi = false;
+  }
+  if (facPalDirty) {
+    gl.bindTexture(gl.TEXTURE_2D, tex.facPal);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.RGBA, gl.UNSIGNED_BYTE, facPalData);
+    facPalDirty = false;
+  }
+  if (zonePalDirty) {
+    gl.bindTexture(gl.TEXTURE_2D, tex.zonePal);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 64, 1, gl.RGBA, gl.UNSIGNED_BYTE, zonePalData);
+    zonePalDirty = false;
+  }
+  if (zoneDirty) {
+    gl.bindTexture(gl.TEXTURE_2D, tex.zone);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_BYTE, zoneOfProv);
+    zoneDirty = false;
+  }
+  if (facDirty) {
+    gl.bindTexture(gl.TEXTURE_2D, tex.fac);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_BYTE, provFacData);
+    facDirty = false;
+  }
+  if (dirtyOwner) {
+    gl.bindTexture(gl.TEXTURE_2D, tex.owner);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, LUT_W, LUT_H, gl.RED_INTEGER, gl.UNSIGNED_SHORT, ownerTexData);
+    dirtyOwner = false;
+  }
+}
+function draw(screenW, screenH, offX, offY, scale) {
+  if (!tex.pal || !prog) return;
+  uploadIfDirty();
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  gl.viewport(0, 0, screenW, screenH);
+  gl.clearColor(look.bg[0], look.bg[1], look.bg[2], 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.useProgram(prog);
+  gl.uniform1i(uni.uProv, 0);
+  gl.uniform1i(uni.uOwner, 1);
+  gl.uniform1i(uni.uHi, 2);
+  gl.uniform1i(uni.uPal, 3);
+  gl.uniform1i(uni.uTerr, 4);
+  gl.uniform1i(uni.uFac, 5);
+  gl.uniform1i(uni.uFacPal, 6);
+  gl.uniform1i(uni.uState, 7);
+  gl.uniform1i(uni.uZone, 8);
+  gl.uniform1i(uni.uZonePal, 9);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex.prov);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex.owner);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tex.hi);
+  gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, tex.pal);
+  gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, tex.terr || tex.pal);
+  gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, tex.fac);
+  gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, tex.facPal);
+  gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, tex.state);
+  gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, tex.zone);
+  gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, tex.zonePal);
+  gl.uniform2f(uni.uScreen, screenW, screenH);
+  gl.uniform2f(uni.uOffset, offX, offY);
+  gl.uniform2f(uni.uSize, W, H);
+  gl.uniform1f(uni.uScale, scale);
+  gl.uniform1i(uni.uDbg, DBG);
+  gl.uniform1f(uni.uFacOn, showFac ? 1 : 0);
+  gl.uniform1f(uni.uProvB, look.provB);
+  gl.uniform1f(uni.uStateB, look.stateB ? 1 : 0);
+  gl.uniform1f(uni.uSat, look.sat);
+  gl.uniform1f(uni.uTerrAmt, look.terr);
+  gl.uniform3f(uni.uTint, look.tint[0], look.tint[1], look.tint[2]);
+  gl.uniform3f(uni.uBg, look.bg[0], look.bg[1], look.bg[2]);
+  gl.uniform3f(uni.uSea, look.sea[0], look.sea[1], look.sea[2]);
+  gl.uniform1f(uni.uSeaMix, look.seaMix);
+  gl.uniform1f(uni.uLift, look.lift);
+  gl.uniform3f(uni.uCBorder, look.border[0], look.border[1], look.border[2]);
+  gl.uniform1f(uni.uCMix, look.borderMix);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* ---------- 相机 ---------- */
+function fitView() {
+  const r = cv.getBoundingClientRect();
+  const pad = 12;
+  const s = Math.min((r.width - pad * 2) / W, (r.height - pad * 2) / H);
+  cam.s = s;
+  cam.x = (r.width - W * s) / 2;
+  cam.y = (r.height - H * s) / 2;
+  const z = $("#hZoom"); if (z) z.textContent = Math.round(cam.s * 100) + "%";
+}
+function clampCam() {
+  const r = cv.getBoundingClientRect();
+  const w = W * cam.s, h = H * cam.s;
+  const m = 90;
+  if (w <= r.width) cam.x = (r.width - w) / 2;
+  else cam.x = Math.min(m, Math.max(r.width - w - m, cam.x));
+  if (h <= r.height) cam.y = (r.height - h) / 2;
+  else cam.y = Math.min(m, Math.max(r.height - h - m, cam.y));
+}
+
+function resize() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const r = cv.getBoundingClientRect();
+  cv.width = Math.round(r.width * dpr);
+  cv.height = Math.round(r.height * dpr);
+  lb.width = cv.width;
+  lb.height = cv.height;
+}
+
+/* 屏幕上的国名层 */
+function renderLabelsOverlay() {
+  if (!PACK) return;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  lbx.setTransform(1, 0, 0, 1, 0, 0);
+  lbx.clearRect(0, 0, lb.width, lb.height);
+  if (!showNames) return;
+  if (anchorsDirty) computeAnchors();
+  drawLabelLayer(lbx, cam.s * dpr, cam.x * dpr, cam.y * dpr, lb.width, lb.height, {
+    names: showNames, cities: showCities, capitals: showCapitals,
+    minScreen: 700 * dpr * dpr, sizeK: 0.13, minSize: 9.5, maxSize: 90 * dpr, fontScale: fontScale
+  });
+}
+
+function drawNow() {
+  if (!PACK) return;
+  try {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    draw(cv.width, cv.height, cam.x * dpr, cam.y * dpr, cam.s * dpr);
+    renderLabelsOverlay();
+    window.__draws = (window.__draws || 0) + 1;
+  } catch (e) {
+    window.__drawErr = e.message;
+  }
+}
+
+/* ---------- 坐标 ---------- */
+function toMap(clientX, clientY) {
+  const r = cv.getBoundingClientRect();
+  return {x: (clientX - r.left - cam.x) / cam.s, y: (clientY - r.top - cam.y) / cam.s};
+}
+function provAt(mx, my) {
+  const x = Math.floor(mx), y = Math.floor(my);
+  if (x < 0 || y < 0 || x >= W || y >= H) return -1;
+  return provId[y * W + x];
+}
+
+/* ---------- 涂色 ---------- */
+function groupProvinces(p, g) {
+  if (g === "prov") return [p];
+  if (g === "state") {
+    const sid = stateOfProv[p];
+    if (sid === NO) return [p];
+    return STATES_BY_ID.get(sid) || [p];
+  }
+  const sid = srOfProv[p];
+  if (sid === NO) return [p];
+  return SRS_BY_ID.get(sid) || [p];
+}
+let STATES_BY_ID = new Map(), SRS_BY_ID = new Map();
+
+function paintAt(mx, my) {
+  const p = provAt(mx, my);
+  if (p < 0) return;
+  paintProvince(p, gran);
+}
+
+function paintProvince(p, g) {
+  if (water[p]) return;
+  const ids = groupProvinces(p, g || gran);
+  if (tab === "zone") {
+    if (curZone < 0 && !stroke) return;
+    const zv = curZone >= 0 ? curZone + 1 : 0;
+    let ch = false;
+    for (const q of ids) {
+      if (zoneOfProv[q] === zv) continue;
+      if (stroke && !stroke.prev.has(q)) stroke.prev.set(q, zoneOfProv[q]);
+      zoneOfProv[q] = zv;
+      ch = true;
+    }
+    if (ch) { zoneDirty = true; drawNow(); }
+    return;
+  }
+  let changed = false;
+  for (const q of ids) {
+    if (OWNER[q] === cur) continue;
+    if (stroke && !stroke.prev.has(q)) stroke.prev.set(q, OWNER[q]);
+    OWNER[q] = cur;
+    ownerTexData[q] = cur;
+    if (provFacData) { provFacData[q] = facOfCountry[cur] || 0; facDirty = true; }
+    changed = true;
+  }
+  if (changed) { rebuildPalette(); dirtyOwner = true; drawNow(); }
+}
+
+function pickAt(p) {
+  if (p <= 0 || water[p]) { toast("这里没有东西可吸"); return; }
+  if (tab === "zone") {
+    const z = zoneOfProv[p];
+    if (z > 0) { curZone = z - 1; buildList(); toast("选中范围：" + zones[curZone].name); }
+    else toast("这里没有范围");
+    return;
+  }
+  if (OWNER[p] === NO) { toast("这里是无主地"); return; }
+  cur = OWNER[p];
+  $("#eraser").classList.remove("on");
+  buildList();
+  toast("选中国家：" + countries[cur].name);
+}
+
+function beginStroke() {
+  stroke = {prev: new Map(), layer: tab === "zone" ? "zone" : "owner"};
+}
+function applyZones(ids, vals) {
+  for (let i = 0; i < ids.length; i++) zoneOfProv[ids[i]] = vals[i];
+  zoneDirty = true;
+  buildList();
+  drawNow();
+}
+function endStroke() {
+  if (!stroke) return;
+  if (stroke.prev.size) {
+    const ids = new Uint16Array(stroke.prev.keys());
+    const prev = new Uint16Array(stroke.prev.size);
+    const next = new Uint16Array(stroke.prev.size);
+    let i = 0;
+    for (const p of stroke.prev.keys()) {
+      prev[i] = stroke.prev.get(p);
+      next[i] = stroke.layer === "zone" ? zoneOfProv[p] : OWNER[p];
+      i++;
+    }
+    if (stroke.layer === "zone") pushCmd(() => applyZones(ids, prev), () => applyZones(ids, next));
+    else pushCmd(() => applyOwners(ids, prev), () => applyOwners(ids, next));
+    buildList();
+  }
+  stroke = null;
+}
+
+function applyOwners(ids, vals) {
+  for (let i = 0; i < ids.length; i++) {
+    const p = ids[i];
+    OWNER[p] = vals[i];
+    ownerTexData[p] = vals[i];
+    if (provFacData) provFacData[p] = facOfCountry[OWNER[p]] || 0;
+  }
+  rebuildPalette();
+  dirtyOwner = true;
+  facDirty = true;
+  buildList();
+  drawNow();
+}
+
+/* ---------- 撤销栈：统一成命令 ---------- */
+function pushCmd(u, r) {
+  undoStack.push({u: u, r: r});
+  if (undoStack.length > 120) undoStack.shift();
+  redoStack.length = 0;
+  updateUndo();
+  scheduleAutosave();
+}
+function undo() {
+  const a = undoStack.pop();
+  if (!a) return;
+  a.u();
+  redoStack.push(a);
+  updateUndo();
+  scheduleAutosave();
+}
+function redo() {
+  const a = redoStack.pop();
+  if (!a) return;
+  a.r();
+  undoStack.push(a);
+  updateUndo();
+  scheduleAutosave();
+}
+
+/* 结构性改动（增删国家/势力、改色、改名、迁都）用整包快照 */
+function snapshot() {
+  return {
+    owners: OWNER.slice(),
+    countries: countries.map(c => ({name: c.name, color: c.color.slice(), titleId: c.titleId, capital: c.capital || 0})),
+    factions: factions.map(f => ({name: f.name, color: f.color.slice()})),
+    fac: facOfCountry.slice(),
+    zones: zones.map(z => ({name: z.name, color: z.color.slice()})),
+    zone: zoneOfProv ? zoneOfProv.slice() : null,
+    cur: cur, curFac: curFac, curZone: curZone
+  };
+}
+function applySnapshot(s) {
+  countries = s.countries.map(c => ({name: c.name, color: c.color.slice(), titleId: c.titleId, capital: c.capital || 0}));
+  countries.forEach((c, i) => c.slot = i);
+  factions = s.factions.map(f => ({name: f.name, color: f.color.slice()}));
+  facOfCountry = s.fac.slice();
+  zones = (s.zones || []).map(z => ({name: z.name, color: z.color.slice()}));
+  if (s.zone && zoneOfProv) zoneOfProv.set(s.zone);
+  OWNER.set(s.owners);
+  for (let p = 0; p < NT; p++) ownerTexData[p] = OWNER[p];
+  cur = Math.max(0, Math.min(s.cur, countries.length - 1));
+  curFac = Math.min(s.curFac, factions.length - 1);
+  curZone = Math.min(s.curZone == null ? -1 : s.curZone, zones.length - 1);
+  capitalCache = new Map();
+  rebuildPalette();
+  dirtyOwner = true;
+  updateFacData();
+  updateZoneData();
+  buildList();
+  drawNow();
+}
+function commitSnapshot(before) {
+  const after = snapshot();
+  pushCmd(() => applySnapshot(before), () => applySnapshot(after));
+}
+function updateUndo() {
+  $("#undo").disabled = !undoStack.length;
+  $("#redo").disabled = !redoStack.length;
+}
+
+/* ---------- 列表 ---------- */
+function buildList() {
+  recount();
+  anchorsDirty = true;
+  const box = $("#countries");
+  const keepScroll = box.scrollTop;
+  box.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  const q = searchQ.trim().toLowerCase();
+  let shown = 0;
+  if (tab === "cty") {
+    countries.forEach((c, i) => {
+      if (q && c.name.toLowerCase().indexOf(q) < 0) return;
+      const d = document.createElement("div");
+      d.className = "cty" + (i === cur ? " on" : "");
+      d.dataset.i = i;
+      const rgb = `rgb(${c.color[0]},${c.color[1]},${c.color[2]})`;
+      d.innerHTML = `<span class="sw" style="background:${rgb}"></span>
+        <span class="nm"></span><span class="ct">${countryCount[i]}</span>`;
+      d.querySelector(".nm").textContent = c.name;
+      d.onclick = () => { cur = i; $("#eraser").classList.remove("on"); syncEdit(); buildList(); };
+      frag.appendChild(d);
+      shown++;
+    });
+  } else if (tab === "fac") {
+    factions.forEach((f, i) => {
+      if (q && f.name.toLowerCase().indexOf(q) < 0) return;
+      let n = 0;
+      for (let k = 0; k < countries.length; k++) if (facOfCountry[k] === i + 1) n++;
+      const d = document.createElement("div");
+      d.className = "cty" + (i === curFac ? " on" : "");
+      d.dataset.f = i;
+      const rgb = `rgb(${f.color[0]},${f.color[1]},${f.color[2]})`;
+      d.innerHTML = `<span class="sw" style="background:${rgb}"></span>
+        <span class="nm"></span><span class="ct">${n} 国</span>`;
+      d.querySelector(".nm").textContent = f.name;
+      d.onclick = () => { curFac = i; syncEdit(); buildList(); };
+      frag.appendChild(d);
+      shown++;
+    });
+    if (!factions.length) {
+      const d = document.createElement("div");
+      d.style.cssText = "padding:14px 8px;color:var(--faint);font-size:11.5px;line-height:1.7";
+      d.textContent = "还没有阵营。点上面的「新建阵营」，再回「国家」页签给国家选所属阵营。";
+      frag.appendChild(d);
+    }
+  } else {
+    const cnt = new Int32Array(zones.length + 1);
+    for (let p = 1; p < NT; p++) { const z = zoneOfProv[p]; if (z > 0 && z <= zones.length) cnt[z]++; }
+    zones.forEach((z, i) => {
+      if (q && z.name.toLowerCase().indexOf(q) < 0) return;
+      const d = document.createElement("div");
+      d.className = "cty" + (i === curZone ? " on" : "");
+      d.dataset.z = i;
+      const rgb = `rgb(${z.color[0]},${z.color[1]},${z.color[2]})`;
+      d.innerHTML = `<span class="sw" style="background:${rgb}"></span>
+        <span class="nm"></span><span class="ct">${cnt[i + 1]} 省</span>`;
+      d.querySelector(".nm").textContent = z.name;
+      d.onclick = () => { curZone = i; syncEdit(); buildList(); };
+      frag.appendChild(d);
+      shown++;
+    });
+    if (!zones.length) {
+      const d = document.createElement("div");
+      d.style.cssText = "padding:14px 8px;color:var(--faint);font-size:11.5px;line-height:1.7";
+      d.textContent = "还没有势力范围。点上面的「新建范围」，选中后在「范围」页签里直接往地图上涂。";
+      frag.appendChild(d);
+    }
+  }
+  if (!shown && q) {
+    const d = document.createElement("div");
+    d.style.cssText = "padding:14px 8px;color:var(--faint);font-size:11.5px";
+    d.textContent = "没有匹配「" + searchQ + "」的条目";
+    frag.appendChild(d);
+  }
+  box.appendChild(frag);
+  box.scrollTop = keepScroll;
+  syncEdit();
+}
+
+function renderFacMembers() {
+  const box = $("#facMembers");
+  if (!box) return;
+  if (tab !== "fac" || curFac < 0 || !factions[curFac]) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+  box.style.display = "block";
+  box.innerHTML = "";
+  const list = [];
+  for (let i = 0; i < countries.length; i++) if (facOfCountry[i] === curFac + 1) list.push(i);
+  if (!list.length) {
+    const d = document.createElement("div");
+    d.className = "mini";
+    d.textContent = "还没有成员。到「国家」页签，给国家选所属阵营。";
+    box.appendChild(d);
+    return;
+  }
+  list.forEach(i => {
+    const s = document.createElement("span");
+    s.className = "chip";
+    s.textContent = countries[i].name;
+    s.title = "点击移出阵营";
+    s.onclick = () => {
+      const before = snapshot();
+      facOfCountry[i] = 0;
+      updateFacData();
+      buildList();
+      drawNow();
+      commitSnapshot(before);
+    };
+    box.appendChild(s);
+  });
+}
+
+function syncEdit() {
+  const isFac = tab === "fac";
+  const isZone = tab === "zone";
+  const ent = isZone ? zones[curZone] : (isFac ? factions[curFac] : countries[cur]);
+  const row = $("#editRow");
+  // 新建按钮的显隐跟页签走，和有没有选中无关
+  $("#addFac").style.display = isFac ? "" : "none";
+  $("#addZone").style.display = isZone ? "" : "none";
+  $("#addCty").style.display = (isFac || isZone) ? "none" : "";
+  if (!ent) {
+    row.style.display = "none";
+    $("#facRow").style.display = "none";
+    $("#capRow").style.display = "none";
+    renderFacMembers();
+    return;
+  }
+  row.style.display = "flex";
+  $("#editName").value = ent.name;
+  $("#pickColor").value = "#" + ent.color.map(v => v.toString(16).padStart(2, "0")).join("");
+  $("#capRow").style.display = isZone ? "none" : "flex";
+  $("#setCapital").style.display = (isFac || isZone) ? "none" : "";
+  renderFacMembers();
+
+  if (isFac || isZone) {
+    $("#facRow").style.display = "none";
+  } else {
+    $("#facRow").style.display = "flex";
+    const sel = $("#facSel");
+    sel.innerHTML = "";
+    const o0 = document.createElement("option");
+    o0.value = "0";
+    o0.textContent = "（无）";
+    sel.appendChild(o0);
+    factions.forEach((f, i) => {
+      const o = document.createElement("option");
+      o.value = String(i + 1);
+      o.textContent = f.name;
+      sel.appendChild(o);
+    });
+    sel.value = String(facOfCountry[cur] || 0);
+  }
+  const hb = $("#hBrush");
+  if (hb) hb.textContent = cur === NO ? "橡皮" : (countries[cur] ? countries[cur].name : "—");
+  [...$("#countries").children].forEach(el => {
+    el.classList.toggle("on", isZone ? +el.dataset.z === curZone : (isFac ? +el.dataset.f === curFac : +el.dataset.i === cur));
+  });
+}
+
+function setColor(hex, live) {
+  const rgb = [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+  if (tab === "zone") {
+    if (!zones[curZone]) return;
+    zones[curZone].color = rgb;
+    updateZoneData();
+  } else if (tab === "fac") {
+    if (!factions[curFac]) return;
+    factions[curFac].color = rgb;
+    if (!live) updateFacData();
+  } else {
+    if (cur === NO || !countries[cur]) return;
+    countries[cur].color = rgb;
+    rebuildPalette();
+    drawNow();
+  }
+  if (live) {
+    const sw = document.querySelector("#countries .cty.on .sw");
+    if (sw) sw.style.background = "rgb(" + rgb.join(",") + ")";
+    if (tab === "fac") updateFacData();
+  } else {
+    buildList();
+  }
+}
+
+/* ---------- 交互 ---------- */
+let drag = null;
+cv.addEventListener("mousedown", e => {
+  if (!PACK) return;
+  if (e.button === 2 || e.button === 1 || e.shiftKey) {
+    drag = {mode: "pan", x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y};
+    e.preventDefault(); return;
+  }
+  if (e.button !== 0) return;
+  if (pendingCapital) {
+    const mm = toMap(e.clientX, e.clientY);
+    const pp = provAt(mm.x, mm.y);
+    if (pp > 0 && !water[pp] && OWNER[pp] === cur) {
+      const before = snapshot();
+      countries[cur].capital = pp;
+      pendingCapital = false;
+      cv.style.cursor = "crosshair";
+      anchorsDirty = true;
+      buildList();
+      drawNow();
+      commitSnapshot(before);
+      toast("首都：" + PACK.titles.names[provTitle[pp]]);
+    }
+    else if (pp > 0 && !water[pp]) toast("这个省不属于当前国家");
+    return;
+  }
+  if (pendingPick || e.altKey) {
+    const m = toMap(e.clientX, e.clientY);
+    pickAt(provAt(m.x, m.y));
+    if (pendingPick) { pendingPick = false; cv.style.cursor = "crosshair"; $("#pick").classList.remove("on"); }
+    return;
+  }
+  drag = {mode: "paint"};
+  beginStroke();
+  const m = toMap(e.clientX, e.clientY);
+  paintAt(m.x, m.y);
+});
+window.addEventListener("mousemove", e => {
+  if (!PACK) return;
+  if (drag && drag.mode === "pan") {
+    cam.x = drag.cx + (e.clientX - drag.x);
+    cam.y = drag.cy + (e.clientY - drag.y);
+    clampCam();
+    drawNow();
+    return;
+  }
+  const m = toMap(e.clientX, e.clientY);
+  if (drag && drag.mode === "paint") { paintAt(m.x, m.y); }
+  hover(m.x, m.y);
+});
+window.addEventListener("mouseup", () => {
+  if (drag && drag.mode === "paint") endStroke();
+  drag = null;
+});
+cv.addEventListener("contextmenu", e => e.preventDefault());
+cv.addEventListener("mouseleave", () => {
+  for (const q of hoverGroup) hiData[q] = 0;
+  hoverGroup = [];
+  hoverProv = -1;
+  dirtyHi = true;
+  $("#hProv").textContent = "—"; $("#hState").textContent = "—"; $("#hOwner").textContent = "—";
+  drawNow();
+});
+
+cv.addEventListener("wheel", e => {
+  if (!PACK) return;
+  e.preventDefault();
+  const r = cv.getBoundingClientRect();
+  const cx = e.clientX - r.left, cy = e.clientY - r.top;
+  const mx = (cx - cam.x) / cam.s, my = (cy - cam.y) / cam.s;
+  const f = Math.exp(-e.deltaY * 0.0016);
+  cam.s = Math.max(0.08, Math.min(16, cam.s * f));
+  cam.x = cx - mx * cam.s;
+  cam.y = cy - my * cam.s;
+  clampCam();
+  $("#hZoom").textContent = Math.round(cam.s * 100) + "%";
+  drawNow();
+}, {passive: false});
+
+function hover(mx, my) {
+  const p = provAt(mx, my);
+  if (p === hoverProv) return;
+  // 清掉上一组（按州/战略区涂时是一整片，不能只清一个省）
+  for (const q of hoverGroup) hiData[q] = 0;
+  hoverGroup = [];
+  hoverProv = p;
+  if (p > 0) {
+    hoverGroup = groupProvinces(p, gran);
+    for (const q of hoverGroup) hiData[q] = 1;
+  }
+  dirtyHi = true;
+  drawNow();
+
+  if (p <= 0) {
+    $("#hProv").textContent = "—"; $("#hState").textContent = "—"; $("#hOwner").textContent = "—";
+    return;
+  }
+  const t = PACK.titles;
+  $("#hProv").textContent = t.names[provTitle[p]] || ("省 " + p);
+  $("#hState").textContent = stateOfProv[p] !== NO ? t.names[stateOfProv[p]] : "—";
+  const o = OWNER[p];
+  $("#hOwner").textContent = water[p] ? "水域" : (o === NO ? "无主" : countries[o].name);
+}
+
+/* ---------- 标注 ---------- */
+const UI_FONT = '"Microsoft YaHei","PingFang SC",system-ui,sans-serif';
+const TITLE_FONT = 'Georgia,"Songti SC","SimSun",serif';
+
+let provArea = null, provCx = null, provCy = null;
+let stateTexData = null;   // 每省所属州（纹理）
+let provEdges = null;   // 省份邻接对，扁平存储 [a0,b0,a1,b1,...]
+let countryArea = null, countryCount = null, byCountry = null;
+let anchors = [], anchorsDirty = true;
+let CITY = [], capProvSet = new Set(), capOwner = new Map();
+let fontScale = 1;
+let capitalCache = new Map();
+
+function computeProvStats() {
+  provArea = new Float32Array(NT);
+  provCx = new Float32Array(NT);
+  provCy = new Float32Array(NT);
+  const pid = provId;
+  const seen = new Set();
+  const edges = [];
+  const add = (a, b) => {
+    if (a === b) return;
+    const k = a < b ? a * NT + b : b * NT + a;
+    if (seen.has(k)) return;
+    seen.add(k);
+    edges.push(a, b);
+  };
+  for (let y = 0; y < H; y++) {
+    const row = y * W;
+    for (let x = 0; x < W; x++) {
+      const p = pid[row + x];
+      provArea[p]++;
+      provCx[p] += x;
+      provCy[p] += y;
+      if (x + 1 < W) add(p, pid[row + x + 1]);
+      if (y + 1 < H) add(p, pid[row + W + x]);
+    }
+  }
+  provEdges = Int32Array.from(edges);
+  for (let p = 1; p < NT; p++) {
+    if (provArea[p] > 0) { provCx[p] /= provArea[p]; provCy[p] /= provArea[p]; }
+  }
+}
+
+function recount() {
+  const n = countries.length;
+  countryArea = new Float64Array(n);
+  countryCount = new Int32Array(n);
+  byCountry = [];
+  for (let i = 0; i < n; i++) byCountry.push([]);
+  for (let p = 1; p < NT; p++) {
+    if (water[p]) continue;
+    const o = OWNER[p];
+    if (o === NO || o >= n) continue;
+    countryArea[o] += provArea[p];
+    countryCount[o]++;
+    byCountry[o].push(p);
+  }
+}
+
+function capitalProvince(c) {
+  if (c.capital) return c.capital;
+  if (c.titleId < 0) return -1;
+  if (capitalCache.has(c.titleId)) return capitalCache.get(c.titleId);
+  const key = PACK.titles.keys[c.titleId] || "";
+  const tag = key.split("_").pop();
+  const cap = (PACK.meta.capitals || {})[tag];
+  const v = cap ? cap : -1;
+  capitalCache.set(c.titleId, v);
+  return v;
+}
+
+function updateFacData() {
+  if (!provFacData) return;
+  for (let i = 0; i < 63; i++) {
+    const fc = factions[i];
+    const o = (i + 1) * 4;
+    facPalData[o + 3] = fc ? 255 : 0;
+    facPalData[o] = fc ? fc.color[0] : 0;
+    facPalData[o + 1] = fc ? fc.color[1] : 0;
+    facPalData[o + 2] = fc ? fc.color[2] : 0;
+  }
+  for (let p = 0; p < NT; p++) {
+    const o = OWNER[p];
+    provFacData[p] = (o !== NO && o < facOfCountry.length) ? facOfCountry[o] : 0;
+  }
+  facDirty = true;
+  facPalDirty = true;
+  drawNow();
+}
+
+function updateZoneData() {
+  if (!zoneOfProv) return;
+  for (let i = 0; i < 63; i++) {
+    const z = zones[i];
+    const o = (i + 1) * 4;
+    zonePalData[o + 3] = z ? 255 : 0;
+    zonePalData[o] = z ? z.color[0] : 0;
+    zonePalData[o + 1] = z ? z.color[1] : 0;
+    zonePalData[o + 2] = z ? z.color[2] : 0;
+  }
+  zoneDirty = true;
+  zonePalDirty = true;
+  drawNow();
+}
+
+function buildCityList() {
+  CITY = [];
+  const cj = PACK && PACK.cities;
+  const vpMap = new Map();
+  if (cj) for (const row of cj.cities) vpMap.set(row[0], row[1]);
+  for (let p = 1; p < NT; p++) {
+    if (water[p] || !provArea || !provArea[p]) continue;
+    const nm = PACK.titles.names[provTitle[p]];
+    if (!nm || nm.charAt(0) === "#") continue;
+    CITY.push({p: p, vp: vpMap.get(p) || 0, x: provCx[p], y: provCy[p], name: nm});
+  }
+  CITY.sort((a, b) => b.vp - a.vp);
+}
+
+function computeAnchors() {
+  if (!provArea) computeProvStats();
+  recount();
+  // 并查集：把同一国家的相邻省份并成连通块
+  const par = new Int32Array(NT);
+  for (let i = 0; i < NT; i++) par[i] = i;
+  const find = (x) => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
+  const e = provEdges;
+  for (let i = 0; i < e.length; i += 2) {
+    const a = e[i], b = e[i + 1];
+    const oa = OWNER[a];
+    if (oa !== NO && oa === OWNER[b]) {
+      const ra = find(a), rb = find(b);
+      if (ra !== rb) par[rb] = ra;
+    }
+  }
+  const out = [];
+  for (let i = 0; i < countries.length; i++) {
+    const list = byCountry[i];
+    if (!list.length) continue;
+    const rootArea = new Map();
+    for (const p of list) {
+      const r = find(p);
+      rootArea.set(r, (rootArea.get(r) || 0) + provArea[p]);
+    }
+    let bestRoot = -1, bestA = -1;
+    for (const [r, a] of rootArea) if (a > bestA) { bestA = a; bestRoot = r; }
+    // 有首都且在境内，就用首都所在那块（避免海外领地拉偏）
+    const cap = capitalProvince(countries[i]);
+    if (cap > 0 && cap < NT && OWNER[cap] === i) {
+      const r = find(cap);
+      if (rootArea.has(r)) bestRoot = r;
+    }
+    bestA = rootArea.get(bestRoot) || 0;
+    let wx = 0, wy = 0, ws = 0;
+    for (const p of list) {
+      if (find(p) !== bestRoot) continue;
+      const w = provArea[p];
+      wx += provCx[p] * w; wy += provCy[p] * w; ws += w;
+    }
+    if (!ws) continue;
+    out.push({c: i, x: wx / ws, y: wy / ws, area: bestA});
+  }
+  out.sort((a, b) => b.area - a.area);
+  anchors = out;
+  capProvSet = new Set();
+  capOwner = new Map();
+  for (let i = 0; i < countries.length; i++) {
+    const p = capitalProvince(countries[i]);
+    if (p > 0 && p < NT && OWNER[p] === i) { capProvSet.add(p); capOwner.set(p, i); }
+  }
+  anchorsDirty = false;
+}
+
+function drawOneLabel(ctx, text, x, y, size, weight) {
+  ctx.font = weight + " " + size + "px " + UI_FONT;
+  if ("letterSpacing" in ctx) ctx.letterSpacing = (size * 0.06).toFixed(1) + "px";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
+  const ui = look.ui || UI_DEFAULT;
+  ctx.strokeStyle = ui.halo;
+  ctx.lineWidth = Math.max(2, size * 0.17);
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = ui.text;
+  ctx.fillText(text, x, y);
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+}
+
+function overlaps(placed, r) {
+  for (const q of placed) {
+    if (r.x < q.x + q.w && r.x + r.w > q.x && r.y < q.y + q.h && r.y + r.h > q.y) return true;
+  }
+  return false;
+}
+
+function drawCountries(ctx, scale, ox, oy, vw, vh, placed, opts) {
+  const fs = opts.fontScale || 1;
+  const minS = opts.minScreen == null ? 260 : opts.minScreen;
+  const k = opts.sizeK || 0.11;
+  let n = 0;
+  for (const a of anchors) {
+    const sArea = a.area * scale * scale;
+    if (sArea < minS) continue;
+    const x = a.x * scale + ox, y = a.y * scale + oy;
+    if (x < -300 || y < -120 || x > vw + 300 || y > vh + 120) continue;
+    const text = countries[a.c].name;
+    const minSize = (opts.minSize || 8) * fs;
+    let size = Math.min((opts.maxSize || 150) * fs, Math.sqrt(sArea) * k * fs);
+    if (size < minSize) continue;
+    // 首都的屏幕位置：国名尽量别压在星标上
+    const capP = capitalProvince(countries[a.c]);
+    const capPt = (capP > 0 && provArea[capP] > 0)
+      ? {x: provCx[capP] * scale + ox, y: provCy[capP] * scale + oy} : null;
+    let done = false;
+    for (let attempt = 0; attempt < 3 && !done; attempt++) {
+      ctx.font = "600 " + size + "px " + UI_FONT;
+      const w = ctx.measureText(text).width + size * 0.5;
+      const h = size * 1.3;
+      let offs = [0, -1.15, 1.15, -2.3, 2.3];
+      if (capPt) {
+        const free = offs.filter(dy => {
+          const r0 = {x: x - w / 2, y: y + dy * h - h / 2, w: w, h: h};
+          return !(capPt.x > r0.x - size * 0.6 && capPt.x < r0.x + r0.w + size * 0.6 &&
+                   capPt.y > r0.y - size * 0.6 && capPt.y < r0.y + r0.h + size * 0.6);
+        });
+        if (free.length) offs = free;
+      }
+      for (const dy of offs) {
+        const r = {x: x - w / 2, y: y + dy * h - h / 2, w: w, h: h};
+        if (!overlaps(placed, r)) {
+          placed.push(r);
+          drawOneLabel(ctx, text, x, y + dy * h, size, "600");
+          n++;
+          done = true;
+          break;
+        }
+      }
+      if (!done) {
+        size *= 0.82;
+        if (size < minSize) break;
+      }
+    }
+  }
+  return n;
+}
+
+function star(ctx, x, y, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5;
+    const rr = i % 2 ? r * 0.44 : r;
+    const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+function drawCities(ctx, scale, ox, oy, vw, vh, placed, opts) {
+  if (!CITY.length) return 0;
+  const fs = opts.fontScale || 1;
+  let minVp, minCapVp;
+  if (scale < 0.3) { minVp = 30; minCapVp = 18; }
+  else if (scale < 0.5) { minVp = 20; minCapVp = 12; }
+  else if (scale < 0.8) { minVp = 10; minCapVp = 6; }
+  else if (scale < 1.2) { minVp = 5; minCapVp = 2; }
+  else if (scale < 2.0) { minVp = 1; minCapVp = 0; }
+  else { minVp = 0; minCapVp = 0; }
+  const zf = Math.max(0.7, Math.min(1.7, Math.sqrt(scale / 0.9)));
+  let n = 0;
+
+  const capMinArea = opts.capMinArea == null ? 130 : opts.capMinArea;
+  const drawOne = (c, isCap) => {
+    if (!isCap && c.vp < minVp) return false;
+    if (isCap) {
+      // 首都按“所属国家在屏幕上有多大”决定，而不是按胜利点
+      const ci = capOwner.get(c.p);
+      if (ci == null) return false;
+      if ((countryArea[ci] || 0) * scale * scale < capMinArea) return false;
+    }
+    const x = c.x * scale + ox, y = c.y * scale + oy;
+    if (x < -60 || y < -60 || x > vw + 60 || y > vh + 60) return false;
+    const size = Math.max(7, Math.min(26, (7.0 + Math.min(c.vp, 30) * 0.26) * fs * zf));
+    const ui = look.ui || UI_DEFAULT;
+    let r = (isCap ? size * 0.62 * ui.capScale : size * 0.27 * ui.dotScale);
+    if (isCap) r = Math.max(3.1, r);
+    const markerBox = {x: x - r * 1.5, y: y - r * 1.5, w: r * 3, h: r * 3};
+    // 普通城市被挤掉就不画；首都星标一律画出来，否则国名会把首都整个盖掉
+    if (!isCap && overlaps(placed, markerBox)) return false;
+
+    ctx.font = "500 " + size + "px " + UI_FONT;
+    const tw = ctx.measureText(c.name).width;
+    const box = {x: x - r * 1.6, y: y - size * 0.62, w: r * 3.2 + size * 0.55 + tw, h: size * 1.24};
+    const canLabel = !overlaps(placed, box);
+    // 首都：名字放不下也要把星画出来
+    if (!canLabel && !isCap) return false;
+    placed.push(canLabel ? box : markerBox);
+
+    if (canLabel) {
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = ui.halo;
+      ctx.lineWidth = Math.max(2, size * 0.16);
+      ctx.strokeText(c.name, x + r + size * 0.5, y);
+      ctx.fillStyle = isCap ? ui.text : ui.dot;
+      ctx.fillText(c.name, x + r + size * 0.5, y);
+    }
+
+    if (isCap) {
+      // 钢铁雄心那种实心五角星：投影 + 填充 + 细描边
+      ctx.save();
+      ctx.shadowColor = ui.capShadow;
+      ctx.shadowBlur = Math.max(1, r * 0.45);
+      ctx.shadowOffsetY = Math.max(0.5, r * 0.12);
+      star(ctx, x, y, r);
+      ctx.fillStyle = ui.capFill;
+      ctx.fill();
+      ctx.restore();
+      star(ctx, x, y, r);
+      ctx.lineWidth = Math.max(1, r * 0.2);
+      ctx.strokeStyle = ui.capLine;
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = ui.dot;
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, r * 0.55);
+      ctx.strokeStyle = ui.dotRing;
+      ctx.stroke();
+    }
+    if (canLabel) n++;
+    return true;
+  };
+
+  // 先画首都（从大到小），再画普通城市，保证首都优先占位
+  if (opts.capitals !== false) {
+    for (const c of CITY) if (capProvSet.has(c.p)) drawOne(c, true);
+  }
+  if (opts.cities !== false) {
+    for (const c of CITY) if (!capProvSet.has(c.p)) drawOne(c, false);
+  }
+  return n;
+}
+function drawLabelLayer(ctx, scale, ox, oy, vw, vh, opts) {
+  const placed = [];
+  let n = 0;
+  if (opts.names) n += drawCountries(ctx, scale, ox, oy, vw, vh, placed, opts);
+  if (opts.cities || opts.capitals) n += drawCities(ctx, scale, ox, oy, vw, vh, placed, opts);
+  return n;
+}
+
+/* ---------- 图例 / 标题 ---------- */
+function drawTitle(ctx, w, h, text) {
+  if (!text) return;
+  const bandH = Math.round(h * 0.085);
+  const ui = look.ui || UI_DEFAULT;
+  const g = ctx.createLinearGradient(0, 0, 0, bandH);
+  g.addColorStop(0, ui.legendBg);
+  g.addColorStop(0.72, ui.legendBg);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, bandH);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  if ("letterSpacing" in ctx) ctx.letterSpacing = (h * 0.0035).toFixed(1) + "px";
+  ctx.font = "600 " + Math.round(h * 0.033) + "px " + TITLE_FONT;
+  ctx.fillStyle = ui.title;
+  ctx.fillText(text, w / 2, bandH * 0.46);
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  ctx.strokeStyle = ui.titleRule;
+  ctx.lineWidth = Math.max(1, h * 0.0009);
+  ctx.beginPath();
+  ctx.moveTo(w / 2 - w * 0.045, bandH * 0.70);
+  ctx.lineTo(w / 2 + w * 0.045, bandH * 0.70);
+  ctx.stroke();
+}
+
+function drawLegend(ctx, w, h, limit) {
+  const ids = [];
+  for (let i = 0; i < countries.length; i++) if (countryArea[i] > 0) ids.push(i);
+  if (!ids.length) return;
+  ids.sort((a, b) => countryArea[b] - countryArea[a]);
+  const show = ids.slice(0, limit || 24);
+  const rest = ids.length - show.length;
+
+  const fs = Math.max(10, Math.round(h * 0.0128));
+  const rowH = Math.round(fs * 1.95);
+  const sw = Math.round(fs * 1.0);
+  ctx.font = "500 " + fs + "px " + UI_FONT;
+  let maxName = 0;
+  for (const i of show) maxName = Math.max(maxName, ctx.measureText(countries[i].name).width);
+
+  const colW = Math.round(maxName + sw + fs * 2.2);
+  const cols = Math.max(1, Math.min(6, Math.floor((w * 0.9) / colW)));
+  const rows = Math.ceil(show.length / cols);
+  const padX = Math.round(fs * 1.6), padY = Math.round(fs * 1.3);
+  const panelW = colW * cols + padX * 2;
+  const panelH = rows * rowH + padY * 2 + (rest > 0 ? Math.round(rowH * 0.95) : 0);
+  const x0 = Math.round((w - panelW) / 2);
+  const y0 = h - panelH - Math.round(h * 0.032);
+
+  const ui = look.ui || UI_DEFAULT;
+  ctx.fillStyle = ui.legendBg;
+  const r = Math.round(fs * 0.9);
+  ctx.beginPath();
+  ctx.moveTo(x0 + r, y0);
+  ctx.arcTo(x0 + panelW, y0, x0 + panelW, y0 + panelH, r);
+  ctx.arcTo(x0 + panelW, y0 + panelH, x0, y0 + panelH, r);
+  ctx.arcTo(x0, y0 + panelH, x0, y0, r);
+  ctx.arcTo(x0, y0, x0 + panelW, y0, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = ui.legendRule;
+  ctx.lineWidth = Math.max(1, h * 0.0008);
+  ctx.stroke();
+
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  for (let k = 0; k < show.length; k++) {
+    const col = Math.floor(k / rows), row = k % rows;
+    const cx = x0 + padX + col * colW;
+    const cy = y0 + padY + row * rowH + rowH / 2;
+    const c = countries[show[k]];
+    ctx.fillStyle = "rgb(" + c.color[0] + "," + c.color[1] + "," + c.color[2] + ")";
+    ctx.fillRect(cx, cy - sw / 2, sw, sw);
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.strokeStyle = ui.legendText;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx + 0.5, cy - sw / 2 + 0.5, sw - 1, sw - 1);
+    ctx.restore();
+    ctx.fillStyle = ui.legendText;
+    ctx.fillText(c.name, cx + sw + fs * 0.7, cy);
+  }
+  if (rest > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = ui.legendText;
+    ctx.font = "400 " + Math.round(fs * 0.9) + "px " + UI_FONT;
+    ctx.fillText("另有 " + rest + " 个国家未列出", x0 + padX, y0 + padY + rows * rowH + rowH * 0.45);
+    ctx.restore();
+  }
+}
+
+/* ---------- 存档 ---------- */
+const SAVE_KEY = "mapStudioAutosave";
+let autosaveTimer = 0;
+
+function scheduleAutosave() {
+  if (!PACK) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(serializeState())); } catch (e) {}
+  }, 1000);
+}
+
+function bytesToB64(u8) {
+  let s = "";
+  const CH = 0x8000;
+  for (let i = 0; i < u8.length; i += CH) {
+    s += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+  }
+  return btoa(s);
+}
+function b64ToBytes(b64) {
+  const s = atob(b64);
+  const u8 = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i);
+  return u8;
+}
+
+function serializeState() {
+  const owners = new Uint16Array(NT);
+  for (let p = 0; p < NT; p++) owners[p] = OWNER[p];
+  return {
+    v: 1,
+    t: Date.now(),
+    pack: (PACK && PACK.manifest && PACK.manifest.id) || "",
+    dv: (PACK && PACK.manifest && PACK.manifest.dataVersion) || 1,
+    w: W, h: H, n: NT,
+    countries: countries.map(c => [c.name, c.color, c.capital || 0, c.titleId]),
+    factions: factions.map(f => [f.name, f.color]),
+    fac: Array.from(facOfCountry),
+    zones: zones.map(z => [z.name, z.color]),
+    zone: bytesToB64(zoneOfProv),
+    owners: bytesToB64(new Uint8Array(owners.buffer))
+  };
+}
+
+function applyState(st) {
+  if (!st || st.n !== NT) throw new Error("存档和当前地图不匹配");
+  const bytes = b64ToBytes(st.owners);
+  if (bytes.length < NT * 2) throw new Error("存档数据不完整");
+  const owners = new Uint16Array(bytes.buffer, bytes.byteOffset, NT);
+  countries = st.countries.map(a => ({name: a[0], color: a[1].slice(), capital: a[2] || 0, titleId: a[3], slot: 0}));
+  countries.forEach((c, i) => c.slot = i);
+  factions = (st.factions || []).map(a => ({name: a[0], color: a[1].slice()}));
+  const f = new Uint8Array(countries.length);
+  const src = st.fac || [];
+  for (let i = 0; i < countries.length; i++) f[i] = src[i] || 0;
+  facOfCountry = f;
+  zones = (st.zones || []).map(a => ({name: a[0], color: a[1].slice()}));
+  if (st.zone && zoneOfProv) {
+    const zb = b64ToBytes(st.zone);
+    for (let p = 0; p < NT && p < zb.length; p++) zoneOfProv[p] = zb[p];
+  }
+  for (let p = 0; p < NT; p++) { OWNER[p] = owners[p]; ownerTexData[p] = owners[p]; }
+  capitalCache = new Map();
+  cur = 0;
+  curFac = -1;
+  pendingCapital = false;
+  undoStack.length = 0;
+  redoStack.length = 0;
+  updateUndo();
+  rebuildPalette();
+  dirtyOwner = true;
+  updateFacData();
+  updateZoneData();
+  buildList();
+  drawNow();
+}
+
+function tryRestore() {
+  let raw = null;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return; }
+  if (!raw) return;
+  try {
+    const st = JSON.parse(raw);
+    const dv = (PACK.manifest && PACK.manifest.dataVersion) || 1;
+    if (!st || st.pack !== ((PACK.manifest && PACK.manifest.id) || "") || st.n !== NT) return;
+    if (st.dv !== dv) return;   // 旧版存档（地图数据已改），忽略
+    applyState(st);
+    toast("已恢复上次进度");
+  } catch (e) {}
+}
+
+function saveToFile() {
+  if (!PACK) return;
+  const blob = new Blob([JSON.stringify(serializeState())], {type: "application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "地图存档-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast("已保存存档文件");
+}
+
+function deleteCountry(i) {
+  if (countries.length <= 1) { toast("至少留一个国家"); return; }
+  const before = snapshot();
+  const name = countries[i].name;
+  for (let p = 1; p < NT; p++) {
+    if (OWNER[p] === i) OWNER[p] = NO;
+    else if (OWNER[p] !== NO && OWNER[p] > i) OWNER[p]--;
+  }
+  countries.splice(i, 1);
+  countries.forEach((c, k) => c.slot = k);
+  const f = new Uint8Array(countries.length);
+  let j = 0;
+  for (let k = 0; k < facOfCountry.length && j < f.length; k++) {
+    if (k === i) continue;
+    f[j++] = facOfCountry[k];
+  }
+  facOfCountry = f;
+  cur = Math.max(0, Math.min(i, countries.length - 1));
+  anchorsDirty = true;
+  rebuildPalette();
+  dirtyOwner = true;
+  updateFacData();
+  buildList();
+  drawNow();
+  commitSnapshot(before);
+  toast("已删除 " + name);
+}
+
+function deleteZone(i) {
+  const before = snapshot();
+  const name = zones[i].name;
+  zones.splice(i, 1);
+  for (let p = 0; p < NT; p++) {
+    const z = zoneOfProv[p];
+    if (z === i + 1) zoneOfProv[p] = 0;
+    else if (z > i + 1) zoneOfProv[p]--;
+  }
+  curZone = Math.max(-1, Math.min(i, zones.length - 1));
+  updateZoneData();
+  buildList();
+  drawNow();
+  commitSnapshot(before);
+  toast("已删除范围 " + name);
+}
+
+function deleteFaction(i) {
+  const before = snapshot();
+  const name = factions[i].name;
+  factions.splice(i, 1);
+  for (let k = 0; k < facOfCountry.length; k++) {
+    if (facOfCountry[k] === i + 1) facOfCountry[k] = 0;
+    else if (facOfCountry[k] > i + 1) facOfCountry[k]--;
+  }
+  curFac = Math.max(-1, Math.min(i, factions.length - 1));
+  updateFacData();
+  buildList();
+  drawNow();
+  commitSnapshot(before);
+  toast("已删除阵营 " + name);
+}
+/* ---------- 导出 ---------- */
+const TILE = 2048;
+
+function renderTile(tw, th, ox, oy, scale) {
+  const fb = gl.createFramebuffer();
+  const rb = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, tw, th);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, rb);
+  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    throw new Error("帧缓冲不完整（" + tw + "×" + th + "）");
+  }
+  draw(tw, th, ox, oy, scale);
+  const px = new Uint8Array(tw * th * 4);
+  gl.readPixels(0, 0, tw, th, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.deleteFramebuffer(fb);
+  gl.deleteRenderbuffer(rb);
+  return px;
+}
+
+async function buildPoster(scale, opts, onStep) {
+  const outW = Math.round(W * scale), outH = Math.round(H * scale);
+  const c = document.createElement("canvas");
+  c.width = outW; c.height = outH;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#0b0e12";
+  ctx.fillRect(0, 0, outW, outH);
+
+  const tilesX = Math.ceil(outW / TILE), tilesY = Math.ceil(outH / TILE);
+  let done = 0;
+  for (let y = 0; y < outH; y += TILE) {
+    for (let x = 0; x < outW; x += TILE) {
+      const tw = Math.min(TILE, outW - x), th = Math.min(TILE, outH - y);
+      const px = renderTile(tw, th, -x, -y, scale);
+      const img = ctx.createImageData(tw, th);
+      for (let r = 0; r < th; r++) {
+        const src = (th - 1 - r) * tw * 4, dst = r * tw * 4;
+        img.data.set(px.subarray(src, src + tw * 4), dst);
+      }
+      ctx.putImageData(img, x, y);
+      done++;
+      if (onStep) onStep(done, tilesX * tilesY);
+      await new Promise(res => setTimeout(res, 0));
+    }
+  }
+
+  const keepFac = showFac;
+  try {
+  showFac = opts.factions !== false;
+  if (anchorsDirty) computeAnchors();
+  const minScreen = Math.round(4500 * scale * scale);
+  drawLabelLayer(ctx, scale, 0, 0, outW, outH, {
+    names: opts.names, cities: opts.cities, minScreen: minScreen, sizeK: 0.1,
+    minSize: 9, maxSize: Math.round(outH * 0.05), fontScale: fontScale
+  });
+  if (opts.title) drawTitle(ctx, outW, outH, opts.title);
+  if (opts.legend) drawLegend(ctx, outW, outH, 24);
+  } finally { showFac = keepFac; }
+  return c;
+}
+
+function exportPNG(scale, opts) {
+  if (!PACK) return;
+  hiData.fill(0);
+  dirtyHi = true;
+  const label = scale > 1 ? "2× 高清" : "1×";
+  toast("正在渲染" + label + "…");
+  buildPoster(scale, opts, (d, n) => { if (n > 1) toast("渲染中 " + d + "/" + n); })
+    .then(c => c.toBlob(b => {
+      if (!b) { toast("导出失败：图片过大或内存不足"); return; }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = "地图-" + c.width + "x" + c.height + ".png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast("已导出 " + c.width + "×" + c.height + "（" + Math.round(b.size / 1048576 * 10) / 10 + " MB）");
+    }, "image/png"))
+    .catch(e => toast("导出失败：" + e.message));
+}
+/* ---------- UI ---------- */
+const NOTICE_KEY = "mapStudioNotice";
+const NOTICE_VER = "1.42";
+function closeNotice() {
+  if ($("#noticeAck").checked) {
+    try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
+  }
+  $("#notice").classList.add("hide");
+}
+$("#noticeOk").onclick = closeNotice;
+$("#noticeLink").onclick = e => { e.preventDefault(); $("#notice").classList.remove("hide"); };
+try {
+  if (localStorage.getItem(NOTICE_KEY) !== NOTICE_VER) $("#notice").classList.remove("hide");
+} catch (e) {
+  $("#notice").classList.remove("hide");
+}
+
+$("#errdel").onclick = () => { $("#errbar").style.display = "none"; };
+$("#errcopy").onclick = () => {
+  const txt = "地图工坊错误\n" + lastError + "\nUA: " + navigator.userAgent;
+  try { navigator.clipboard.writeText(txt); toast("已复制"); } catch (e) { alert(txt); }
+};
+
+function toast(s) {
+  const t = $("#toast");
+  t.textContent = s; t.classList.add("on");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove("on"), 1800);
+}
+$("#open").onclick = () => $("#file").click();
+$("#file").onchange = e => { if (e.target.files[0]) loadPack(e.target.files[0]).catch(err => alert(err.message)); };
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f) loadPack(f).catch(err => alert(err.message));
+});
+function setTab(t) {
+  tab = t;
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t));
+  buildList();
+}
+document.querySelectorAll("#tabs button").forEach(b => { b.onclick = () => setTab(b.dataset.t); });
+$("#addZone").onclick = () => {
+  const before = snapshot();
+  const n = zones.length;
+  const rgb = hsvToRgb(((n * 0.23 + 0.55) % 1), 0.45, 0.75);
+  zones.push({name: "范围 " + (n + 1), color: rgb});
+  curZone = zones.length - 1;
+  updateZoneData();
+  buildList();
+  commitSnapshot(before);
+  toast("选中后直接在地图上涂");
+};
+$("#addFac").onclick = () => {
+  const before = snapshot();
+  const n = factions.length;
+  const rgb = hsvToRgb(((n * 0.37 + 0.05) % 1), 0.42, 0.72);
+  factions.push({name: "阵营 " + (n + 1), color: rgb});
+  curFac = factions.length - 1;
+  updateFacData();
+  buildList();
+  commitSnapshot(before);
+};
+$("#facSel").onchange = e => {
+  if (cur === NO || !countries[cur]) return;
+  const before = snapshot();
+  facOfCountry[cur] = +e.target.value;
+  updateFacData();
+  buildList();
+  commitSnapshot(before);
+};
+
+document.querySelectorAll("#gran button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#gran button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    gran = b.dataset.g;
+    hoverProv = -1; hoverGroup = []; hiData.fill(0); dirtyHi = true;
+  };
+});
+$("#undo").onclick = undo;
+$("#redo").onclick = redo;
+$("#eraser").onclick = () => {
+  cur = NO;
+  curZone = -1;
+  $("#eraser").classList.add("on");
+  buildList();
+  toast(tab === "zone" ? "橡皮：擦掉范围" : "橡皮：涂成无主");
+};
+$("#fit").onclick = () => { fitView(); drawNow(); };
+$("#search").oninput = e => {
+  searchQ = e.target.value;
+  const box = $("#countries");
+  if (box) box.scrollTop = 0;
+  buildList();
+};
+$("#search").onkeydown = e => {
+  if (e.key === "Escape") {
+    e.target.value = "";
+    searchQ = "";
+    buildList();
+  }
+};
+function applyLook(patch, save) {
+  Object.assign(look, patch);
+  const th = THEMES[look.theme] || THEMES.default;
+  look.sat = th.sat;
+  look.tint = th.tint;
+  look.bg = th.bg;
+  look.sea = th.sea;
+  look.seaMix = th.seaMix;
+  look.lift = th.lift;
+  look.border = th.border;
+  look.borderMix = th.borderMix;
+  look.ui = th.ui || UI_DEFAULT;
+  document.documentElement.setAttribute("data-theme", look.theme);
+  drawNow();
+  if (save !== false) {
+    try {
+      localStorage.setItem("mapLook", JSON.stringify({
+        theme: look.theme, provB: look.provB, stateB: look.stateB, terr: look.terr,
+        names: showNames, cities: showCities, caps: showCapitals
+      }));
+    } catch (e) {}
+  }
+}
+$("#theme").onchange = e => applyLook({theme: e.target.value});
+$("#provB").oninput = e => applyLook({provB: +e.target.value / 100});
+$("#terrAmt").oninput = e => applyLook({terr: +e.target.value / 100});
+$("#stateB").onchange = e => applyLook({stateB: e.target.checked});
+$("#showNamesC").onchange = e => { showNames = e.target.checked; applyLook({}); };
+$("#showCitiesC").onchange = e => { showCities = e.target.checked; applyLook({}); };
+$("#showCapitalsC").onchange = e => { showCapitals = e.target.checked; applyLook({}); };
+try {
+  const s = JSON.parse(localStorage.getItem("mapLook") || "null");
+  if (s) {
+    look.theme = THEMES[s.theme] ? s.theme : "default";
+    look.provB = typeof s.provB === "number" ? s.provB : 1;
+    look.terr = typeof s.terr === "number" ? s.terr : 1;
+    look.stateB = !!s.stateB;
+    showNames = s.names !== false;
+    showCities = s.cities !== false;
+    showCapitals = s.caps !== false;
+    $("#showNamesC").checked = showNames;
+    $("#showCitiesC").checked = showCities;
+    $("#showCapitalsC").checked = showCapitals;
+    $("#theme").value = look.theme;
+    $("#provB").value = Math.round(look.provB * 100);
+    $("#terrAmt").value = Math.round(look.terr * 100);
+    $("#stateB").checked = look.stateB;
+    applyLook({}, false);
+  }
+} catch (e) {}
+
+$("#pick").onclick = () => {
+  pendingPick = true;
+  pendingCapital = false;
+  cv.style.cursor = "copy";
+  $("#pick").classList.add("on");
+  toast(tab === "zone" ? "点地图拾取范围" : "点地图拾取国家");
+};
+$("#setCapital").onclick = () => {
+  if (cur === NO || !countries[cur]) return;
+  pendingCapital = true;
+  cv.style.cursor = "copy";
+  toast("点地图上的省份设首都");
+};
+$("#delEnt").onclick = () => {
+  if (tab === "zone") {
+    if (curZone < 0 || !zones[curZone]) return;
+    if (!confirm("删除范围「" + zones[curZone].name + "」？它覆盖的省会被清空。")) return;
+    deleteZone(curZone);
+    return;
+  }
+  if (tab === "fac") {
+    if (curFac < 0 || !factions[curFac]) return;
+    if (!confirm("删除阵营「" + factions[curFac].name + "」？成员会变回无阵营。")) return;
+    deleteFaction(curFac);
+  } else {
+    if (cur === NO || !countries[cur]) return;
+    if (!confirm("删除「" + countries[cur].name + "」？它的省份会变成无主。")) return;
+    deleteCountry(cur);
+  }
+};
+$("#saveFile").onclick = saveToFile;
+$("#loadFile").onclick = () => $("#stateFile").click();
+$("#stateFile").onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const before = snapshot();
+  f.text().then(txt => {
+    applyState(JSON.parse(txt));
+    commitSnapshot(before);
+    toast("已读取存档");
+  }).catch(err => alert("读取失败：" + err.message));
+  e.target.value = "";
+};
+$("#resetAll").onclick = () => {
+  if (!confirm("清空所有涂色、国家和阵营，恢复 1936 原图？")) return;
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  location.reload();
+};
+const $fs = $("#fontScale");
+function applyFontScale(v) {
+  fontScale = v / 100;
+  $("#fsVal").textContent = v + "%";
+  try { localStorage.setItem("mapFontScale", v); } catch (e) {}
+  drawNow();
+}
+$fs.oninput = () => applyFontScale(+$fs.value);
+{ let sv = 100; try { sv = +(localStorage.getItem("mapFontScale") || 100); } catch (e) {} $fs.value = sv; fontScale = sv / 100; $("#fsVal").textContent = sv + "%"; }
+
+$("#addCty").onclick = () => {
+  const before = snapshot();
+  const n = countries.length;
+  const grown = new Uint8Array(n + 1);
+  grown.set(facOfCountry);
+  facOfCountry = grown;
+  const h = (n * 137.508) % 360;
+  const c = hsvToRgb(h / 360, 0.55, 0.85);
+  countries.push({slot: n, titleId: -1, name: "新国家 " + (n + 1), color: c});
+  cur = n;
+  buildList();
+  commitSnapshot(before);
+};
+$("#editName").onchange = e => {
+  const name = e.target.value.trim();
+  const ent = tab === "zone" ? zones[curZone] : (tab === "fac" ? factions[curFac] : countries[cur]);
+  if (!ent) return;
+  if (name && name !== ent.name) {
+    const before = snapshot();
+    ent.name = name;
+    buildList();
+    drawNow();
+    commitSnapshot(before);
+  }
+};
+let colorTx = null;
+$("#pickColor").oninput = e => {
+  if (!colorTx) colorTx = snapshot();
+  setColor(e.target.value, true);
+};
+$("#pickColor").onchange = () => {
+  if (colorTx) { commitSnapshot(colorTx); colorTx = null; }
+};
+$("#pickColor").oninput = e => setColor(e.target.value);
+$("#export").onclick = () => { $("#modal").classList.remove("hide"); };
+$("#exCancel").onclick = () => $("#modal").classList.add("hide");
+$("#modal").onclick = e => { if (e.target === $("#modal")) $("#modal").classList.add("hide"); };
+$("#exGo").onclick = () => {
+  $("#modal").classList.add("hide");
+  exportPNG(Number($("#exScale").value) || 1, {
+    title: $("#exTitle").value.trim(),
+    names: $("#exNames").checked,
+    cities: $("#exCities").checked,
+    factions: $("#exFac").checked,
+    legend: $("#exLegend").checked
+  });
+};
+window.addEventListener("keydown", e => {
+  const tag = (e.target && e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "select" || tag === "textarea") return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+  if (e.key === "1") document.querySelector('[data-g="prov"]').click();
+  if (e.key === "2") document.querySelector('[data-g="state"]').click();
+  if (e.key === "3") document.querySelector('[data-g="sr"]').click();
+  if (e.key === "Escape") $("#modal").classList.add("hide");
+});
+
+function hsvToRgb(h, s, v) {
+  const i = Math.floor(h * 6), f = h * 6 - i;
+  const p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s);
+  let r, g, b;
+  switch (i % 6) {
+    case 0: r = v; g = t; b = p; break;
+    case 1: r = q; g = v; b = p; break;
+    case 2: r = p; g = v; b = t; break;
+    case 3: r = p; g = q; b = v; break;
+    case 4: r = t; g = p; b = v; break;
+    default: r = v; g = p; b = q;
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+/* ---------- 自检 ---------- */
+function runSelfTest() {
+  setTimeout(() => {
+    try {
+      const log = [];
+      { let wc = 0, lc = 0; for (let p = 0; p < NT; p++) { if (water[p]) wc++; if (palette[p * 4 + 3] > 0) lc++; }
+        log.push("water=" + wc + " land=" + lc + " ctry=" + countries.length + " own100=" + OWNER[100] + " ter=" + (PACK.terrainImg ? 1 : 0));
+        log.push("draws=" + (window.__draws || 0) + " err=" + gl.getError()); }
+      cur = countries.findIndex(c => c.name === "法国");
+      if (cur < 0) cur = 1;
+      gran = "state";
+      beginStroke();
+      let n = 0;
+      for (const s of states) {
+        if (n >= 6) break;
+        if (water[s.provinces[0]]) continue;
+        paintProvince(s.provinces[0], "state");
+        n++;
+      }
+      endStroke();
+      log.push("painted=" + n + " undo=" + undoStack.length);
+      undo();
+      log.push("undo ok");
+      redo();
+      log.push("redo ok");
+      const before = OWNER[states.find(s => !water[s.provinces[0]]).provinces[0]];
+      beginStroke();
+      cur = countries.length - 1;
+      paintProvince(states.find(s => !water[s.provinces[0]]).provinces[0], "prov");
+      endStroke();
+      log.push("prov paint=" + (OWNER[states.find(s => !water[s.provinces[0]]).provinces[0]] !== before));
+      undo();
+      drawNow();
+      document.title = "SELFTEST " + log.join(" | ");
+      document.body.setAttribute("data-selftest", log.join(" | "));
+    } catch (e) {
+      document.title = "SELFTEST FAIL " + e.message;
+    }
+  }, 800);
+}
+
+/* ---------- 启动 ---------- */
+window.addEventListener("resize", () => { resize(); clampCam(); drawNow(); });
+resize();
+if (!gl) {
+  fatal("这个浏览器没有 WebGL2，画不了地图。");
+} else if (typeof DecompressionStream === "undefined") {
+  fatal("浏览器内核太旧（缺少 DecompressionStream），读不了解压后的地图数据。");
+}
+
+const qs = new URLSearchParams(location.search);
+/* ==DEV-START== */
+if (qs.has("ack")) {
+  try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
+  document.title = "ACKED";
+}
+if (qs.get("theme") && THEMES[qs.get("theme")]) {
+  const th = qs.get("theme");
+  setTimeout(() => { $("#theme").value = th; applyLook({theme: th}, false); }, 600);
+}
+if (qs.has("stateb")) {
+  setTimeout(() => { $("#stateB").checked = true; applyLook({stateB: true}, false); }, 600);
+}
+if (qs.has("diag")) {
+  setTimeout(() => {
+    const info = [
+      "UA: " + navigator.userAgent,
+      "WebGL2: " + (gl ? "OK" : "无"),
+      "纹理单元: " + (gl ? gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) : "-") + " / 合并 " + (gl ? gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS) : "-"),
+      "DecompressionStream: " + (typeof DecompressionStream !== "undefined" ? "OK" : "无"),
+      "地图: " + (PACK ? (PACK.manifest.label + " " + W + "x" + H) : "未载入"),
+      "城市: " + CITY.length,
+      "最近错误: " + (lastError || "无")
+    ].join("\n");
+    showError(info.replace(/\n/g, " ｜ "));
+    document.title = "DIAG " + info.replace(/\n/g, " | ");
+  }, 2500);
+}
+if (qs.get("fs")) { const v = Math.max(55, Math.min(175, +qs.get("fs"))); $fs.value = v; applyFontScale(v); }
+if (qs.has("corruptsave")) {
+  try { localStorage.setItem(SAVE_KEY, "{\"v\":1,\"pack\":\"hoi4-vanilla-1936\",\"n\":13414,\"owners\":\"bogus\"}"); } catch (e) {}
+  document.title = "CORRUPTED";
+}
+if (qs.has("painttest")) {
+  setTimeout(() => {
+    const gi = countries.findIndex(c => c.name === "德意志国");
+    const fi = countries.findIndex(c => c.name === "法国");
+    let gp = -1;
+    for (let p = 1; p < NT; p++) if (OWNER[p] === gi && !water[p]) { gp = p; break; }
+    beginStroke(); cur = fi; paintProvince(gp, "prov"); endStroke();
+    countries[fi].name = "AUTOTEST";
+    buildList(); drawNow();
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(serializeState())); } catch (e) {}
+    document.title = "PAINTED n=" + countries.length;
+  }, 1200);
+}
+if (qs.has("checkrestore")) {
+  setTimeout(() => {
+    document.title = "RESTORE " + (countries.some(c => c.name === "AUTOTEST") ? "YES" : "NO") + " n=" + countries.length;
+  }, 2600);
+}
+if (qs.has("bugtest")) {
+  setTimeout(() => {
+    const R = [];
+    const ok = (name, cond, extra) => R.push(name + (cond ? ":OK" : ":FAIL") + (extra ? "(" + extra + ")" : ""));
+    try {
+      ok("countries", countries.length === 101, countries.length);
+      ok("anchors", anchors.length > 20, anchors.length);
+      // 找一个德国省
+      const gi = countries.findIndex(c => c.name === "德意志国");
+      const fi = countries.findIndex(c => c.name === "法国");
+      let gp = -1;
+      for (let p = 1; p < NT; p++) if (OWNER[p] === gi && !water[p]) { gp = p; break; }
+      ok("foundGER", gp > 0, gp);
+      // 势力：德国 -> 轴心(2)，法国 -> 同盟(1)
+      factions = [{name: "同盟国", color: [70, 110, 180]}, {name: "轴心国", color: [120, 120, 120]}];
+      facOfCountry = new Uint8Array(countries.length);
+      facOfCountry[gi] = 2; facOfCountry[fi] = 1;
+      updateFacData();
+      ok("fac_init", provFacData[gp] === 2, provFacData[gp]);
+
+      // 搜索
+      const rows0 = $("#countries").children.length;
+      $("#search").value = "德";
+      $("#search").dispatchEvent(new Event("input"));
+      const rows1 = $("#countries").children.length;
+      ok("search_filter", rows1 > 0 && rows1 < rows0, rows0 + "->" + rows1);
+      $("#search").value = "zzzzzz";
+      $("#search").dispatchEvent(new Event("input"));
+      ok("search_none", $("#countries").children.length === 1, $("#countries").children.length);
+      $("#search").value = "";
+      $("#search").dispatchEvent(new Event("input"));
+      ok("search_reset", $("#countries").children.length === rows0, $("#countries").children.length);
+
+      // 吸管
+      cur = fi;
+      pickAt(gp);
+      ok("pick_country", cur === gi, cur);
+      // 涂一个德国省给法国
+      beginStroke();
+      cur = fi;
+      paintProvince(gp, "prov");
+      endStroke();
+      ok("owner_changed", OWNER[gp] === fi, OWNER[gp]);
+      ok("fac_follows_paint", provFacData[gp] === 1, provFacData[gp]);
+      ok("palette_follows", palette[gp * 4] === countries[fi].color[0], palette[gp * 4] + "/" + countries[fi].color[0]);
+      // 撤销
+      undo();
+      ok("undo_owner", OWNER[gp] === gi, OWNER[gp]);
+      ok("undo_fac", provFacData[gp] === 2, provFacData[gp]);
+      // 改色后是否重绘
+      const before = window.__draws || 0;
+      cur = gi;
+      setColor("#123456");
+      ok("color_repaint", (window.__draws || 0) > before, (before + "->" + (window.__draws || 0)));
+      ok("color_palette", palette[gp * 4] === 0x12, palette[gp * 4]);
+
+      // 橡皮：涂成无主
+      cur = NO;
+      beginStroke();
+      paintProvince(gp, "prov");
+      endStroke();
+      ok("eraser", OWNER[gp] === NO && palette[gp * 4 + 3] === 255, OWNER[gp]);
+      undo();
+      ok("eraser_undo", OWNER[gp] === gi, OWNER[gp]);
+
+      // 新建国家 -> 涂 -> 有锚点
+      const before_n = countries.length;
+      $("#addCty").click();
+      ok("add_country", countries.length === before_n + 1 && facOfCountry.length === countries.length, countries.length);
+      const np = countries.length - 1;
+      cur = np;
+      beginStroke();
+      paintProvince(gp, "prov");
+      endStroke();
+      ok("new_painted", OWNER[gp] === np, OWNER[gp]);
+      ok("new_anchor", anchors.some(a => a.c === np), anchors.length);
+      undo();
+
+      // 相机夹取
+      cam.x = -999999; cam.y = -999999;
+      clampCam();
+      ok("clamp", cam.x > -999999 && cam.y > -999999, Math.round(cam.x) + "," + Math.round(cam.y));
+      fitView();
+
+      // 迁都
+      const fp = gp;
+      const beforeCap = snapshot();
+      countries[gi].capital = fp;
+      anchorsDirty = true;
+      computeAnchors();
+      ok("capital_set", capProvSet.has(fp), fp);
+      commitSnapshot(beforeCap);
+      undo();
+      ok("capital_undo", !countries[gi].capital, countries[gi].capital);
+
+      // 删除国家 + 撤销
+      const n0 = countries.length;
+      const dBefore = snapshot();
+      deleteCountry(fi);
+      ok("del_country", countries.length === n0 - 1, countries.length);
+      let bad = 0;
+      for (let p = 1; p < NT; p++) if (OWNER[p] !== NO && OWNER[p] >= countries.length) bad++;
+      ok("del_remap", bad === 0, bad);
+      undo();
+      ok("del_undo", countries.length === n0, countries.length);
+
+      // 存档往返
+      const st = serializeState();
+      const o1 = OWNER[gp], c1 = countries.length;
+      applyState(JSON.parse(JSON.stringify(st)));
+      ok("save_roundtrip", OWNER[gp] === o1 && countries.length === c1, OWNER[gp] + "/" + countries.length);
+
+      // 边界修正：藏南/阿克赛钦 是独立州且归属中华民国
+      const stZN = states.find(s => s.name === "藏南");
+      const stAK = states.find(s => s.name === "阿克赛钦");
+      const chiIdx = countries.findIndex(c => c.name === "中华民国");
+      ok("fix_state_zn", !!stZN && stZN.provinces.length === 4, stZN ? stZN.provinces.length : -1);
+      ok("fix_state_ak", !stAK, stAK ? "still exists" : "gone");
+      ok("fix_owner_zn", !!stZN && OWNER[stZN.provinces[0]] === chiIdx, chiIdx);
+      ok("fix_5042", states.some(s => s.name === "和阗" && s.provinces.includes(5042)), 5042);
+
+      // 势力范围图层
+      setTab("zone");
+      ok("zone_btn_visible", getComputedStyle($("#addZone")).display !== "none");
+      $("#addZone").click();
+      ok("zone_add", zones.length === 1, zones.length);
+      const zp = states.find(s => s.name === "藏南").provinces[0];
+      curZone = 0;
+      beginStroke();
+      paintProvince(zp, "prov");
+      endStroke();
+      ok("zone_paint", zoneOfProv[zp] === 1, zoneOfProv[zp]);
+      undo();
+      ok("zone_undo", zoneOfProv[zp] === 0, zoneOfProv[zp]);
+      setTab("cty");
+
+      // 城市：杭州要能看到
+      ok("city_hangzhou", CITY.some(c => c.name === "杭州"), CITY.length);
+
+      // 阵营：新建按钮可见 + 能新建 + 能归属
+      const gi2 = countries.findIndex(c => c.name === "德意志国");
+      let gp2 = -1;
+      for (let p = 1; p < NT; p++) if (OWNER[p] === gi2 && !water[p]) { gp2 = p; break; }
+      setTab("fac");
+      ok("fac_btn_visible", getComputedStyle($("#addFac")).display !== "none");
+      const f0 = factions.length;
+      $("#addFac").click();
+      ok("fac_add", factions.length === f0 + 1, factions.length);
+      ok("fac_selected", curFac === factions.length - 1, curFac);
+      setTab("cty");
+      cur = gi2;
+      const sel = $("#facSel");
+      sel.value = String(factions.length);
+      sel.dispatchEvent(new Event("change"));
+      ok("fac_assign", facOfCountry[gi2] === factions.length, facOfCountry[gi2]);
+      ok("fac_apply", provFacData[gp2] === factions.length, provFacData[gp2]);
+
+      // 导出：factions 开关后恢复
+      ok("showfac_default", showFac === true);
+      document.title = "BUGTEST " + R.join(" ");
+    } catch (e) { document.title = "BUGTEST CRASH " + e.message; }
+  }, 1500);
+}
+if (qs.has("facdemo")) {
+  setTimeout(() => {
+    factions = [{name: "同盟国", color: [74, 110, 170]}, {name: "轴心国", color: [128, 120, 112]}, {name: "共产国际", color: [158, 64, 60]}];
+    facOfCountry = new Uint8Array(countries.length);
+    const put = (re, f) => { const i = countries.findIndex(c => c.name.indexOf(re) >= 0); if (i >= 0) facOfCountry[i] = f; };
+    put("联合王国", 1); put("法国", 1); put("美利坚合众国", 1);
+    put("德意志国", 2); put("意大利", 2); put("日本", 2); put("满洲", 2);
+    put("苏维埃联盟", 3); put("蒙古", 3);
+    curFac = 0;
+    updateFacData();
+    // 演示：两块势力范围
+    zones = [{name: "同盟势力范围", color: [60, 130, 235]}, {name: "轴心势力范围", color: [225, 95, 55]}];
+    zoneOfProv = new Uint8Array(LUT_N);
+    for (let p = 1; p < NT; p++) {
+      if (!provArea[p] || water[p]) continue;
+      const X = provCx[p], Y = provCy[p];
+      if (X > 2760 && X < 3060 && Y > 420 && Y < 620) zoneOfProv[p] = 1;
+      else if (X > 3000 && X < 3360 && Y > 620 && Y < 820) zoneOfProv[p] = 2;
+    }
+    updateZoneData();
+    if (qs.get("tab") === "fac") setTab("fac"); else buildList();
+    drawNow();
+  }, 1200);
+}
+if (qs.has("poster")) {
+  setTimeout(async () => {
+    try {
+      if (!PACK) return;
+      const ps = Number(qs.get("poster")) || 1;
+      const c = await buildPoster(ps, {title: "世界地图 · 1936", names: true, cities: true, legend: true});
+      document.body.innerHTML = "";
+      document.body.style.background = "#0b0e12";
+      const img = new Image();
+      img.src = c.toDataURL("image/png");
+      const cr = new URLSearchParams(location.search).get("crop");
+      img.style.cssText = cr
+        ? "position:absolute;left:" + (-Number(cr.split(",")[0])) + "px;top:" + (-Number(cr.split(",")[1])) + "px"
+        : "position:absolute;inset:0;width:100%;height:auto";
+      document.body.appendChild(img);
+      document.title = "POSTER " + c.width + "x" + c.height;
+    } catch (e) { document.title = "POSTER FAIL " + e.message; }
+  }, 1200);
+}
+if (qs.has("testexport")) {
+  const iv = setInterval(() => {
+    if (!PACK) return;
+    clearInterval(iv);
+    try {
+      const px = renderTile(W, H, 0, 0, 1);
+      let sum = 0; for (let i = 0; i < px.length; i += 4096) sum = (sum + px[i]) | 0;
+      const c = buildPoster(1, {title: "测试", names: true, legend: true});
+      c.then(cv2 => { document.title = "EXPORT OK " + px.length + " sum=" + sum + " poster=" + cv2.width + "x" + cv2.height; })
+       .catch(e => { document.title = "POSTER FAIL " + e.message; });
+    } catch (e) { document.title = "EXPORT FAIL " + e.message; }
+  }, 300);
+}
+if (qs.has("pack")) {
+  fetch(qs.get("pack")).then(r => r.arrayBuffer()).then(b => loadPack({arrayBuffer: () => Promise.resolve(b)}))
+    .catch(e => { document.title = "LOAD FAIL " + e.message; });
+}
+/* ==DEV-END== */
+</script>
+</body>
+</html>
