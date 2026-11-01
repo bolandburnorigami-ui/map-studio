@@ -57,17 +57,36 @@
 - 正版《Hearts of Iron IV》（本文用 1.19.3.0 验证）
 - 一个原始的 `.pdxmap` 底图包（由配套的「悖论制图」工具从游戏导出，含 `provinces_id.bin` / `titlemap.bin` / `titles.json` / `meta.json`）
 
-### 三步
+### 三步（推荐：直接读游戏目录）
 
 ```bat
-:: 1. 生成数据包（把 --hoi4 换成你自己的游戏目录）
-python build_pack.py --hoi4 "D:/Steam/steamapps/common/Hearts of Iron IV" --src pdx-hoi4-vanilla.pdxmap --out world-1936.pdxmap
+:: 1. 从游戏（或任意模组）生成数据包
+python build_pack_from_game.py --game "D:/Steam/steamapps/common/Hearts of Iron IV" --out world-1936.pdxmap
 
 :: 2. 内嵌成单文件
 python build_single.py
 
 :: 3. 打开
 start map-studio.html
+```
+
+**任意模组**同理，把 `--game` 指到模组目录，再用 `--base` 指到游戏目录补全缺失文件：
+
+```bat
+python build_pack_from_game.py ^
+  --game "D:/Steam/steamapps/workshop/content/394360/2204739234" ^
+  --base "D:/Steam/steamapps/common/Hearts of Iron IV" ^
+  --id twr --label "千周之国" --scenario-name "千周之国" --out twr-1936.pdxmap
+
+python build_single.py --pack twr-1936.pdxmap --out "千周之国.html"
+```
+
+每个数据包会在开始页显示自己的剧本名，和原版的 1936 / 1939 互不干扰。
+
+### 旧流程（需要中间包）
+
+```bat
+python build_pack.py --hoi4 "<游戏目录>" --src pdx-hoi4-vanilla.pdxmap --out world-1936.pdxmap
 ```
 
 `build_single.py` 会读同目录的 `editor.html` 和 `world-1936.pdxmap`，输出 `map-studio.html`。

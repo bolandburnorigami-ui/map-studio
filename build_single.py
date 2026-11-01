@@ -1,31 +1,35 @@
-﻿# -*- coding: utf-8 -*-
-"""把 editor.html + world-1936.pdxmap 打成一个自包含的 HTML。
+# -*- coding: utf-8 -*-
+"""把 editor.html + 一个 .pdxmap 打成自包含的 HTML。
 
-产物：map-studio.html —— 双击即开，不联网、不选文件、离线可用。
+用法：
+    python build_single.py                         # 默认用 world-1936.pdxmap
+    python build_single.py --pack twr-1936.pdxmap --out 千周之国.html
 """
-import base64, os, sys
+import argparse
+import base64
+import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+ap = argparse.ArgumentParser(description="打包单文件版")
+ap.add_argument("--pack", default="world-1936.pdxmap", help="数据包路径")
+ap.add_argument("--out", default="地图工坊.html", help="输出 HTML")
+args = ap.parse_args()
+
 SRC_HTML = os.path.join(HERE, "editor.html")
-SRC_PACK = os.path.join(HERE, "world-1936.pdxmap")
-OUT = os.path.join(HERE, "map-studio.html")
+SRC_PACK = args.pack if os.path.isabs(args.pack) else os.path.join(HERE, args.pack)
+OUT = args.out if os.path.isabs(args.out) else os.path.join(HERE, args.out)
 
 html = open(SRC_HTML, encoding="utf-8").read()
 pack = open(SRC_PACK, "rb").read()
 b64 = base64.b64encode(pack).decode("ascii")
-print("数据包 %d KB -> base64 %d KB" % (len(pack) // 1024, len(b64) // 1024))
+print("数据包 %s %d KB -> base64 %d KB" % (os.path.basename(SRC_PACK), len(pack) // 1024, len(b64) // 1024))
 
-inject = (
-    '<script id="embedded-pack" type="application/octet-stream">%s</script>\n' % b64
-)
-# 放在主脚本之前
+inject = '<script id="embedded-pack" type="application/octet-stream">%s</script>\n' % b64
 marker = '<script>\n"use strict";'
-if marker not in html:
-    marker = '<script>\n"use strict";'
 assert marker in html, "找不到主脚本入口"
 html = html.replace(marker, inject + marker, 1)
 
-# 主脚本里补一段：有内嵌包就直接载入
 boot = """
 /* 内嵌数据包：单文件版直接载入，不需要选文件 */
 (function () {
@@ -47,4 +51,4 @@ boot = """
 html = html.replace("/* ---------- 启动 ---------- */", boot + "\n/* ---------- 启动 ---------- */", 1)
 
 open(OUT, "w", encoding="utf-8").write(html)
-print("写出", OUT, os.path.getsize(OUT) // 1024, "KB")
+print("写出 %s %d KB" % (os.path.basename(OUT), os.path.getsize(OUT) // 1024))

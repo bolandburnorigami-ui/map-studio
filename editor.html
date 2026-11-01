@@ -381,27 +381,7 @@
   <div class="sbox">
     <h1>地图<em>工坊</em></h1>
     <p class="stip">选一个剧本开始</p>
-    <div class="cards">
-      <button class="card cont hide" id="contCard">
-        <b>继续上次</b>
-        <span>恢复你上次没画完的进度。</span>
-      </button>
-      <button class="card" data-scene="0">
-        <b>1936</b>
-        <span>战前的世界。各国带着殖民地与傀儡，边界最完整。</span>
-        <span class="tag">101 个国家</span>
-      </button>
-      <button class="card" data-scene="1">
-        <b>1939</b>
-        <span>战争爆发。德国已吞并奥地利与捷克，欧洲版图改写。</span>
-        <span class="tag">开战前夜</span>
-      </button>
-      <button class="card blank" data-scene="2">
-        <b>空白底图</b>
-        <span>没有任何国家，地形与省界都还在。适合从零画架空世界。</span>
-        <span class="tag">从零开始</span>
-      </button>
-    </div>
+    <div class="cards" id="cards"></div>
     <div class="sfoot"><span id="startVer"></span> · <a href="#" id="startNotice">注意与声明</a></div>
   </div>
 </div>
@@ -417,7 +397,7 @@
         <li><b>隐私</b>：所有编辑只保存在你自己浏览器的本地存储里，工具不联网、不上传任何数据。</li>
         <li><b>浏览器</b>：请用 Microsoft Edge 或 Chrome 打开。微信、QQ、搜狗等内置浏览器内核较旧，可能白屏。</li>
       </ol>
-      <p style="color:var(--faint)">v1.53 · 由 DeepSeek Harness 协助编写</p>
+      <p style="color:var(--faint)">v1.6 · 由 DeepSeek Harness 协助编写</p>
     </div>
     <div class="nfoot">
       <label><input type="checkbox" id="noticeAck"> 不再提示</label>
@@ -845,6 +825,7 @@ async function loadPack(file) {
   const tm = new Uint16Array(tmb.buffer, tmb.byteOffset, 6 * NT);
 
   PACK = {manifest, titles, meta, tm};
+  buildScenarioDefs(manifest);
   if (z["cities.json"]) {
     try { PACK.cities = JSON.parse(dec.decode(z["cities.json"])); } catch (e) { PACK.cities = null; }
   }
@@ -941,8 +922,68 @@ function initWorld(tm, titles) {
 
 
 /* ---------- 剧本 ---------- */
-let scenario = 0;            // 0=1936  1=1939  2=空白
+let scenario = 0;
+let scenarioDefs = [];       // [{key,name,desc,tag,tier}]
 let restoredLast = false;
+
+const DEFAULT_SCENARIOS = [
+  {key: "1936", name: "1936", tier: 0, tag: "战前世界",
+   desc: "各国带着殖民地与傀儡，边界最完整。"},
+  {key: "1939", name: "1939", tier: 1, tag: "开战前夜",
+   desc: "战争爆发。德国已吞并奥地利与捷克，欧洲版图改写。"}
+];
+
+function buildScenarioDefs(manifest) {
+  const list = (manifest && manifest.scenarios && manifest.scenarios.length)
+    ? manifest.scenarios.slice()
+    : DEFAULT_SCENARIOS.slice();
+  scenarioDefs = list.map((s, i) => ({
+    key: s.key || ("s" + i),
+    name: s.name || ("剧本 " + (i + 1)),
+    desc: s.desc || "",
+    tag: s.tag || "",
+    tier: typeof s.tier === "number" ? s.tier : i
+  }));
+  scenarioDefs.push({
+    key: "blank", name: "空白底图", tier: -1, tag: "从零开始",
+    desc: "没有任何国家，地形与省界都还在。适合从零画架空世界。"
+  });
+}
+
+function renderStartCards() {
+  const box = $("#cards");
+  if (!box) return;
+  box.innerHTML = "";
+  const mk = (cls, title, desc, tag, onClick, id) => {
+    const b = document.createElement("button");
+    b.className = "card " + cls;
+    if (id) b.id = id;
+    const t = document.createElement("b");
+    t.textContent = title;
+    b.appendChild(t);
+    const d = document.createElement("span");
+    d.textContent = desc;
+    b.appendChild(d);
+    if (tag) {
+      const g = document.createElement("span");
+      g.className = "tag";
+      g.textContent = tag;
+      b.appendChild(g);
+    }
+    b.onclick = onClick;
+    return b;
+  };
+  if (restoredLast) {
+    box.appendChild(mk("cont", "继续上次", "恢复你上次没画完的进度。", "", () => {
+      closeStartPage();
+      toast("继续上次进度");
+    }, "contCard"));
+  }
+  scenarioDefs.forEach((d, i) => {
+    box.appendChild(mk(d.tier < 0 ? "blank" : "", d.name, d.desc, d.tag,
+      () => chooseScenario(i)));
+  });
+}
 
 /** 按 titlemap 的某一档重建国家名单与归属 */
 function buildCountriesFromTier(tierIdx) {
@@ -972,10 +1013,12 @@ function buildCountriesFromTier(tierIdx) {
 }
 
 /** 切剧本：清空编辑，重铺归属 */
-function applyScenario(s) {
+function applyScenario(idx) {
   if (!PACK) return;
-  buildCountriesFromTier(s === 2 ? 0 : s);
-  if (s === 2) OWNER.fill(NO);
+  const def = scenarioDefs[idx] || scenarioDefs[0] || {tier: 0};
+  const tier = def.tier;
+  buildCountriesFromTier(tier < 0 ? 0 : tier);
+  if (tier < 0) OWNER.fill(NO);
 
   undoStack.length = 0;
   redoStack.length = 0;
@@ -1006,24 +1049,47 @@ function applyScenario(s) {
   hoverGroup = [];
 
   rebuildPalette();
-  scenario = s;
+  scenario = idx;
   buildList();
   drawNow();
   scheduleAutosave();
 }
 
-const SCENE_NAME = ["1936 年剧本", "1939 年剧本", "空白底图"];
+function sceneName(i) {
+  const d = scenarioDefs[i];
+  return d ? d.name : "剧本";
+}
+
+async function chooseScenario(i) {
+  const dirty = undoStack.length > 0 || restoredLast || zones.length > 0 || factions.length > 0;
+  if (dirty) {
+    const parts = [];
+    if (undoStack.length > 0) parts.push(undoStack.length + " 步编辑");
+    if (zones.length > 0) parts.push(zones.length + " 个势力范围");
+    if (factions.length > 0) parts.push(factions.length + " 个阵营");
+    const what = parts.length ? "（" + parts.join("、") + "）" : "（上次的进度）";
+    const ok = await askConfirm("换成「" + sceneName(i) + "」会清空当前地图" + what + "，且这一步不能撤销。确定继续？");
+    if (!ok) return;
+  }
+  closeStartPage();
+  applyScenario(i);
+  toast("已载入 " + sceneName(i));
+}
 
 function showStartPage() {
   const q = new URLSearchParams(location.search);
   const dev = q.get("scene");
   if (dev) {
-    const map = { "1936": 0, "1939": 1, "blank": 2, "2": 2, "1": 1, "0": 0 };
-    const s = map[dev];
-    if (s != null) { applyScenario(s); return; }
+    let idx = scenarioDefs.findIndex(d => d.key === dev);
+    if (idx < 0) {
+      const map = { "1936": "1936", "1939": "1939", "blank": "blank" };
+      idx = scenarioDefs.findIndex(d => d.key === (map[dev] || dev));
+    }
+    if (idx < 0 && /^\d+$/.test(dev)) idx = +dev;
+    if (idx >= 0) { applyScenario(idx); return; }
   }
   if (!PACK) return;
-  $("#contCard").classList.toggle("hide", !restoredLast);
+  renderStartCards();
   $("#start").classList.remove("hide");
   syncStartVer();
 }
@@ -2452,7 +2518,7 @@ function exportPNG(scale, opts) {
 }
 /* ---------- UI ---------- */
 const NOTICE_KEY = "mapStudioNotice";
-const NOTICE_VER = "1.53";
+const NOTICE_VER = "1.6";
 function closeNotice() {
   if ($("#noticeAck").checked) {
     try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
@@ -2463,28 +2529,9 @@ $("#noticeOk").onclick = closeNotice;
 
 $("#sceneBtn").onclick = () => {
   restoredLast = false;
-  $("#contCard").classList.add("hide");
+  renderStartCards();
   $("#start").classList.remove("hide");
 };
-document.querySelectorAll("#start .card[data-scene]").forEach(el => {
-  el.onclick = async () => {
-    const s = +el.dataset.scene;
-    const dirty = undoStack.length > 0 || restoredLast || zones.length > 0 || factions.length > 0;
-    if (dirty) {
-      const parts = [];
-      if (undoStack.length > 0) parts.push(undoStack.length + " 步编辑");
-      if (zones.length > 0) parts.push(zones.length + " 个势力范围");
-      if (factions.length > 0) parts.push(factions.length + " 个阵营");
-      const what = parts.length ? "（" + parts.join("、") + "）" : "（上次的进度）";
-      const ok = await askConfirm("换成 " + SCENE_NAME[s] + " 会清空当前地图" + what + "，且这一步不能撤销。确定继续？");
-      if (!ok) return;
-    }
-    closeStartPage();
-    applyScenario(s);
-    toast("已载入 " + SCENE_NAME[s]);
-  };
-});
-$("#contCard").onclick = () => { closeStartPage(); toast("继续上次进度"); };
 $("#startNotice").onclick = e => { e.preventDefault(); $("#notice").classList.remove("hide"); };
 
 $("#noticeLink").onclick = e => { e.preventDefault(); $("#notice").classList.remove("hide"); };
