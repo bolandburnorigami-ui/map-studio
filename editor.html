@@ -417,7 +417,7 @@
         <li><b>隐私</b>：所有编辑只保存在你自己浏览器的本地存储里，工具不联网、不上传任何数据。</li>
         <li><b>浏览器</b>：请用 Microsoft Edge 或 Chrome 打开。微信、QQ、搜狗等内置浏览器内核较旧，可能白屏。</li>
       </ol>
-      <p style="color:var(--faint)">v1.52 · 由 DeepSeek Harness 协助编写</p>
+      <p style="color:var(--faint)">v1.53 · 由 DeepSeek Harness 协助编写</p>
     </div>
     <div class="nfoot">
       <label><input type="checkbox" id="noticeAck"> 不再提示</label>
@@ -437,6 +437,12 @@
     <label class="f cb"><input type="checkbox" id="exCities" checked> 城市与首都</label>
     <label class="f cb"><input type="checkbox" id="exFac" checked> 阵营边框 / 范围底色</label>
     <label class="f cb"><input type="checkbox" id="exLegend" checked> 图例</label>
+    <label class="f">地图模式
+      <select id="exMode">
+        <option value="country">按国家上色</option>
+        <option value="faction">按阵营上色</option>
+      </select>
+    </label>
     <label class="f">倍率
       <select id="exScale">
         <option value="1">1× · 5632 × 2048</option>
@@ -2409,8 +2415,10 @@ async function buildPoster(scale, opts, onStep) {
   }
 
   const keepFac = showFac;
+  const keepMode = facMode;
   try {
   showFac = opts.factions !== false;
+  if (opts.mode === "faction") facMode = true;
   if (anchorsDirty) computeAnchors();
   const minScreen = Math.round(4500 * scale * scale);
   drawLabelLayer(ctx, scale, 0, 0, outW, outH, {
@@ -2419,12 +2427,13 @@ async function buildPoster(scale, opts, onStep) {
   });
   if (opts.title) drawTitle(ctx, outW, outH, opts.title);
   if (opts.legend) drawLegend(ctx, outW, outH, 24);
-  } finally { showFac = keepFac; }
+  } finally { showFac = keepFac; facMode = keepMode; }
   return c;
 }
 
 function exportPNG(scale, opts) {
   if (!PACK) return;
+  if (opts && opts.mode === "faction") toast("按阵营出图…");
   hiData.fill(0);
   dirtyHi = true;
   const label = scale > 1 ? "2× 高清" : "1×";
@@ -2443,7 +2452,7 @@ function exportPNG(scale, opts) {
 }
 /* ---------- UI ---------- */
 const NOTICE_KEY = "mapStudioNotice";
-const NOTICE_VER = "1.52";
+const NOTICE_VER = "1.53";
 function closeNotice() {
   if ($("#noticeAck").checked) {
     try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
@@ -2734,7 +2743,8 @@ $("#exGo").onclick = () => {
     names: $("#exNames").checked,
     cities: $("#exCities").checked,
     factions: $("#exFac").checked,
-    legend: $("#exLegend").checked
+    legend: $("#exLegend").checked,
+    mode: $("#exMode").value
   });
 };
 window.addEventListener("keydown", e => {
