@@ -417,7 +417,7 @@
         <li><b>隐私</b>：所有编辑只保存在你自己浏览器的本地存储里，工具不联网、不上传任何数据。</li>
         <li><b>浏览器</b>：请用 Microsoft Edge 或 Chrome 打开。微信、QQ、搜狗等内置浏览器内核较旧，可能白屏。</li>
       </ol>
-      <p style="color:var(--faint)">v1.51 · 由 DeepSeek Harness 协助编写</p>
+      <p style="color:var(--faint)">v1.52 · 由 DeepSeek Harness 协助编写</p>
     </div>
     <div class="nfoot">
       <label><input type="checkbox" id="noticeAck"> 不再提示</label>
@@ -544,9 +544,15 @@ void main(){
   // 阵营：平时只记颜色；切到阵营页时整块领土淡淡上色，变成一张「阵营图层」
   uint fac = water0 ? 0u : facOf(id);
   vec3 fcol = vec3(0.0);
-  if (fac > 0u) {
-    fcol = texelFetch(uFacPal, ivec2(int(fac), 0), 0).rgb;
-    if (uFacMode > 0.5) col = mix(col, fcol, 0.20);
+  if (fac > 0u) fcol = texelFetch(uFacPal, ivec2(int(fac), 0), 0).rgb;
+
+  // 阵营地图模式：像游戏里的地图模式一样，整块按阵营重新上色
+  if (uFacMode > 0.5 && !water0) {
+    vec3 base = fac > 0u ? fcol : vec3(0.42, 0.44, 0.47);
+    vec3 themed = clamp(base * (0.86 + 0.26 * lum), 0.0, 1.0);
+    float lg3 = dot(themed, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(lg3), themed, uSat) * uTint;
+    col = clamp(col + uLift, 0.0, 1.0);
   }
 
   // 势力范围：半透明色块
@@ -610,16 +616,10 @@ void main(){
   }
   if (coast) col *= 0.66;
   if (uFacMode > 0.5) {
-    // 阵营分界：用阵营色画一条醒目的线；同阵营内的国界压淡
-    if (fdiff || facWide) {
-      vec3 bcol = fac > 0u ? fcol : nFacCol;
-      vec3 other = fac > 0u ? nFacCol : fcol;
-      col = mix(col, mix(bcol, other, 0.15), 0.92);
-    } else if (countryDiff || countryWide) {
-      col = mix(col, uCBorder, uCMix * 0.42);
-    } else if (anyDiff && !water0) {
-      col *= mix(1.0, 0.9, uProvB);
-    }
+    // 阵营分界画成粗的深色线；阵营内部的国界细一些，省界更淡
+    if (fdiff || facWide) col = mix(col, vec3(0.07, 0.08, 0.09), 0.72);
+    else if (countryDiff || countryWide) col = mix(col, uCBorder, uCMix * 0.5);
+    else if (anyDiff && !water0) col *= mix(1.0, 0.93, uProvB);
   } else if (countryDiff || countryWide) {
     if (countryDiff && fdiff) col = mix(fcol, vec3(0.04, 0.05, 0.06), 0.18);   // 阵营分界：彩色描边
     else col = mix(col, uCBorder, uCMix * (countryDiff ? 1.0 : 0.9));
@@ -2443,7 +2443,7 @@ function exportPNG(scale, opts) {
 }
 /* ---------- UI ---------- */
 const NOTICE_KEY = "mapStudioNotice";
-const NOTICE_VER = "1.51";
+const NOTICE_VER = "1.52";
 function closeNotice() {
   if ($("#noticeAck").checked) {
     try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
