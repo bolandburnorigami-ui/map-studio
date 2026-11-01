@@ -79,6 +79,32 @@
   #panel::-webkit-scrollbar-track,#countries::-webkit-scrollbar-track,#notice .nbody::-webkit-scrollbar-track{background:var(--sb-track)}
   #panel::-webkit-scrollbar-thumb,#countries::-webkit-scrollbar-thumb,#notice .nbody::-webkit-scrollbar-thumb{
     background:var(--sb-thumb);border-radius:5px;border:2px solid var(--sb-track)}
+
+  /* 夜间（TNO）：细窄、直角、青色描边 */
+  html[data-theme="night"] #panel::-webkit-scrollbar,
+  html[data-theme="night"] #countries::-webkit-scrollbar,
+  html[data-theme="night"] #notice .nbody::-webkit-scrollbar{width:7px}
+  html[data-theme="night"] #panel::-webkit-scrollbar-thumb,
+  html[data-theme="night"] #countries::-webkit-scrollbar-thumb,
+  html[data-theme="night"] #notice .nbody::-webkit-scrollbar-thumb{
+    background:#123243;border:1px solid #2b6b80;border-radius:0}
+  html[data-theme="night"] #panel::-webkit-scrollbar-thumb:hover,
+  html[data-theme="night"] #countries::-webkit-scrollbar-thumb:hover{background:#1a4a60;border-color:#2fb6c9}
+
+  /* 羊皮卷：细一点、暖木色 */
+  html[data-theme="paper"] #panel::-webkit-scrollbar-thumb,
+  html[data-theme="paper"] #countries::-webkit-scrollbar-thumb,
+  html[data-theme="paper"] #notice .nbody::-webkit-scrollbar-thumb{
+    background:#b9a27a;border:1px solid #e7dcc6;border-radius:4px}
+
+  /* 早期 Windows：3D 凸起方块 */
+  html[data-theme="win95"] #panel::-webkit-scrollbar,
+  html[data-theme="win95"] #countries::-webkit-scrollbar,
+  html[data-theme="win95"] #notice .nbody::-webkit-scrollbar{width:16px}
+  html[data-theme="win95"] #panel::-webkit-scrollbar-thumb,
+  html[data-theme="win95"] #countries::-webkit-scrollbar-thumb,
+  html[data-theme="win95"] #notice .nbody::-webkit-scrollbar-thumb{
+    background:#c0c0c0;border:2px outset #fff;border-radius:0}
   .ph{padding:12px 14px 10px;border-bottom:1px solid var(--line)}
   .ph h1{margin:0;font-size:14px;font-weight:600;letter-spacing:.5px}
   .ph h1 span{color:var(--gold)}
@@ -310,7 +336,7 @@
         <li><b>隐私</b>：所有编辑只保存在你自己浏览器的本地存储里，工具不联网、不上传任何数据。</li>
         <li><b>浏览器</b>：请用 Microsoft Edge 或 Chrome 打开。微信、QQ、搜狗等内置浏览器内核较旧，可能白屏。</li>
       </ol>
-      <p style="color:var(--faint)">v1.42 · 由 DeepSeek Harness 协助编写</p>
+      <p style="color:var(--faint)">v1.43 · 由 DeepSeek Harness 协助编写</p>
     </div>
     <div class="nfoot">
       <label><input type="checkbox" id="noticeAck"> 不再提示</label>
@@ -531,7 +557,8 @@ const UI_DEFAULT = {
   text: "#f7f3e6", halo: "rgba(8,11,16,0.82)",
   capFill: "#f0c95c", capLine: "rgba(28,22,10,0.92)", capShadow: "rgba(0,0,0,0.5)",
   dot: "#f4f7fa", dotRing: "rgba(12,16,22,0.9)",
-  capScale: 1, dotScale: 1,
+  capScale: 1, dotScale: 1, capInner: 0.44, capRing: false,
+  font: '"Microsoft YaHei","PingFang SC",system-ui,sans-serif', spacing: 0.06,
   legendBg: "rgba(8,11,16,0.84)", legendText: "#dfe6ef", legendRule: "rgba(201,162,39,0.35)",
   title: "#efe4c6", titleRule: "rgba(201,162,39,0.55)"
 };
@@ -545,7 +572,8 @@ const THEMES = {
             ui: {text: "#2e2416", halo: "rgba(246,239,224,0.92)",
                  capFill: "#8a3a1c", capLine: "rgba(252,246,232,0.95)", capShadow: "rgba(90,60,20,0.4)",
                  dot: "#3b2f22", dotRing: "rgba(246,239,224,0.92)",
-                 capScale: 0.92, dotScale: 0.9,
+                 capScale: 0.92, dotScale: 0.9, capInner: 0.44, capRing: false,
+                 font: '"Songti SC","SimSun",Georgia,serif', spacing: 0.05,
                  legendBg: "rgba(243,236,221,0.94)", legendText: "#3b2f22", legendRule: "rgba(120,88,40,0.4)",
                  title: "#4a3a22", titleRule: "rgba(120,88,40,0.55)"}},
   night:   {sat: 0.50, tint: [0.72, 0.82, 1.04], bg: [0.020, 0.028, 0.040], sea: [0.02, 0.05, 0.09], seaMix: 0.55, lift: 0,
@@ -553,7 +581,8 @@ const THEMES = {
             ui: {text: "#d9f1ff", halo: "rgba(2,8,14,0.9)",
                  capFill: "#e8b040", capLine: "rgba(4,10,16,0.92)", capShadow: "rgba(0,0,0,0.6)",
                  dot: "#9fd8e8", dotRing: "rgba(2,8,14,0.9)",
-                 capScale: 1, dotScale: 1,
+                 capScale: 1, dotScale: 1, capInner: 0.44, capRing: false,
+  font: '"Microsoft YaHei","PingFang SC",system-ui,sans-serif', spacing: 0.06,
                  legendBg: "rgba(4,8,12,0.9)", legendText: "#bcd8e6", legendRule: "rgba(47,182,201,0.4)",
                  title: "#8fe3f0", titleRule: "rgba(47,182,201,0.5)"}},
   win95:   {sat: 0.90, tint: [1.00, 1.00, 1.00], bg: [0.752, 0.752, 0.752], sea: [0.36, 0.45, 0.52], seaMix: 0.45, lift: 0.02,
@@ -561,7 +590,8 @@ const THEMES = {
             ui: {text: "#ffffff", halo: "rgba(0,0,0,0.85)",
                  capFill: "#ffd800", capLine: "rgba(0,0,0,0.95)", capShadow: "rgba(0,0,0,0.35)",
                  dot: "#ffffff", dotRing: "rgba(0,0,0,0.85)",
-                 capScale: 1.05, dotScale: 1,
+                 capScale: 1.05, dotScale: 1, capInner: 0.46, capRing: false,
+                 font: '"MS Sans Serif",Tahoma,"Microsoft YaHei",sans-serif', spacing: 0.02,
                  legendBg: "rgba(192,192,192,0.96)", legendText: "#000000", legendRule: "rgba(0,0,128,0.55)",
                  title: "#000080", titleRule: "rgba(0,0,128,0.6)"}}
 };
@@ -1477,6 +1507,13 @@ function hover(mx, my) {
 
 /* ---------- 标注 ---------- */
 const UI_FONT = '"Microsoft YaHei","PingFang SC",system-ui,sans-serif';
+function mapFont() { return (look && look.ui && look.ui.font) || UI_FONT; }
+function mapSpacing(size) { const s = (look && look.ui && look.ui.spacing) || 0; return s ? (size * s).toFixed(2) + "px" : "0px"; }
+function setLabelFont(ctx, weight, size) {
+  const w = (look && look.ui && look.ui.weight) || weight;
+  ctx.font = w + " " + size + "px " + mapFont();
+  if ("letterSpacing" in ctx) ctx.letterSpacing = mapSpacing(size);
+}
 const TITLE_FONT = 'Georgia,"Songti SC","SimSun",serif';
 
 let provArea = null, provCx = null, provCy = null;
@@ -1650,8 +1687,7 @@ function computeAnchors() {
 }
 
 function drawOneLabel(ctx, text, x, y, size, weight) {
-  ctx.font = weight + " " + size + "px " + UI_FONT;
-  if ("letterSpacing" in ctx) ctx.letterSpacing = (size * 0.06).toFixed(1) + "px";
+  setLabelFont(ctx, weight, size);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
@@ -1692,7 +1728,7 @@ function drawCountries(ctx, scale, ox, oy, vw, vh, placed, opts) {
       ? {x: provCx[capP] * scale + ox, y: provCy[capP] * scale + oy} : null;
     let done = false;
     for (let attempt = 0; attempt < 3 && !done; attempt++) {
-      ctx.font = "600 " + size + "px " + UI_FONT;
+      setLabelFont(ctx, "600", size);
       const w = ctx.measureText(text).width + size * 0.5;
       const h = size * 1.3;
       let offs = [0, -1.15, 1.15, -2.3, 2.3];
@@ -1723,11 +1759,12 @@ function drawCountries(ctx, scale, ox, oy, vw, vh, placed, opts) {
   return n;
 }
 
-function star(ctx, x, y, r) {
+function star(ctx, x, y, r, inner) {
+  const k = inner == null ? 0.44 : inner;
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
     const a = -Math.PI / 2 + i * Math.PI / 5;
-    const rr = i % 2 ? r * 0.44 : r;
+    const rr = i % 2 ? r * k : r;
     const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
   }
@@ -1766,7 +1803,7 @@ function drawCities(ctx, scale, ox, oy, vw, vh, placed, opts) {
     // 普通城市被挤掉就不画；首都星标一律画出来，否则国名会把首都整个盖掉
     if (!isCap && overlaps(placed, markerBox)) return false;
 
-    ctx.font = "500 " + size + "px " + UI_FONT;
+    setLabelFont(ctx, "500", size);
     const tw = ctx.measureText(c.name).width;
     const box = {x: x - r * 1.6, y: y - size * 0.62, w: r * 3.2 + size * 0.55 + tw, h: size * 1.24};
     const canLabel = !overlaps(placed, box);
@@ -1791,11 +1828,20 @@ function drawCities(ctx, scale, ox, oy, vw, vh, placed, opts) {
       ctx.shadowColor = ui.capShadow;
       ctx.shadowBlur = Math.max(1, r * 0.45);
       ctx.shadowOffsetY = Math.max(0.5, r * 0.12);
-      star(ctx, x, y, r);
+      star(ctx, x, y, r, ui.capInner);
       ctx.fillStyle = ui.capFill;
       ctx.fill();
       ctx.restore();
-      star(ctx, x, y, r);
+      if (ui.capRing) {
+        ctx.beginPath();
+        ctx.arc(x, y, r * 1.46, 0, Math.PI * 2);
+        ctx.lineWidth = Math.max(1, r * 0.13);
+        ctx.strokeStyle = ui.capLine;
+        ctx.globalAlpha = 0.72;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      star(ctx, x, y, r, ui.capInner);
       ctx.lineWidth = Math.max(1, r * 0.2);
       ctx.strokeStyle = ui.capLine;
       ctx.stroke();
@@ -1866,7 +1912,7 @@ function drawLegend(ctx, w, h, limit) {
   const fs = Math.max(10, Math.round(h * 0.0128));
   const rowH = Math.round(fs * 1.95);
   const sw = Math.round(fs * 1.0);
-  ctx.font = "500 " + fs + "px " + UI_FONT;
+  ctx.font = "500 " + fs + "px " + mapFont();
   let maxName = 0;
   for (const i of show) maxName = Math.max(maxName, ctx.measureText(countries[i].name).width);
 
@@ -1916,7 +1962,7 @@ function drawLegend(ctx, w, h, limit) {
     ctx.save();
     ctx.globalAlpha = 0.7;
     ctx.fillStyle = ui.legendText;
-    ctx.font = "400 " + Math.round(fs * 0.9) + "px " + UI_FONT;
+    ctx.font = "400 " + Math.round(fs * 0.9) + "px " + mapFont();
     ctx.fillText("另有 " + rest + " 个国家未列出", x0 + padX, y0 + padY + rows * rowH + rowH * 0.45);
     ctx.restore();
   }
@@ -2169,7 +2215,7 @@ function exportPNG(scale, opts) {
 }
 /* ---------- UI ---------- */
 const NOTICE_KEY = "mapStudioNotice";
-const NOTICE_VER = "1.42";
+const NOTICE_VER = "1.43";
 function closeNotice() {
   if ($("#noticeAck").checked) {
     try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
