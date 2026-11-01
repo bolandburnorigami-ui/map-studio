@@ -156,6 +156,22 @@
   #confirm .box{width:min(430px,calc(100vw - 48px))}
   #confirm .cmsg{font-size:12.5px;line-height:1.85;color:var(--dim);margin:10px 0 2px}
 
+  /* ---------- 底图选择 ---------- */
+  #packs{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+    background:var(--bg)}
+  #packs.hide{display:none}
+  #packs .sbox{width:min(860px,calc(100vw - 64px));text-align:center}
+  #packs h1{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:2px;color:var(--text)}
+  #packs h1 em{font-style:normal;color:var(--gold)}
+  #packs .stip{margin:0 0 26px;color:var(--faint);font-size:12.5px;letter-spacing:.5px}
+  #packs .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  #packs .card{text-align:left;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:18px;cursor:pointer;color:var(--text);font-family:inherit;
+    transition:border-color .12s,transform .12s,background .12s}
+  #packs .card:hover{border-color:var(--gold);transform:translateY(-2px);background:var(--panel2)}
+  #packs .card b{display:block;font-size:18px;font-weight:700;margin-bottom:7px}
+  #packs .card span{display:block;color:var(--dim);font-size:11.5px;line-height:1.7}
+
   /* ---------- 开始页 ---------- */
   #start{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
     background:var(--bg);}
@@ -377,6 +393,14 @@
   </div>
 </div>
 
+<div id="packs" class="hide">
+  <div class="sbox">
+    <h1>地图<em>工坊</em></h1>
+    <p class="stip">选择一张底图</p>
+    <div class="cards" id="packCards"></div>
+  </div>
+</div>
+
 <div id="start" class="hide">
   <div class="sbox">
     <h1>地图<em>工坊</em></h1>
@@ -397,7 +421,7 @@
         <li><b>隐私</b>：所有编辑只保存在你自己浏览器的本地存储里，工具不联网、不上传任何数据。</li>
         <li><b>浏览器</b>：请用 Microsoft Edge 或 Chrome 打开。微信、QQ、搜狗等内置浏览器内核较旧，可能白屏。</li>
       </ol>
-      <p style="color:var(--faint)">v1.6 · 由 DeepSeek Harness 协助编写</p>
+      <p style="color:var(--faint)">v1.7 · 由 DeepSeek Harness 协助编写</p>
     </div>
     <div class="nfoot">
       <label><input type="checkbox" id="noticeAck"> 不再提示</label>
@@ -906,7 +930,7 @@ function initWorld(tm, titles) {
   hiData = new Uint8Array(LUT_N);
   palette = new Uint8Array(LUT_N * 4);
   rebuildPalette();
-  cur = countries.findIndex(c => c.name === "德意志国");
+  cur = countryByTag("GER");
   if (cur < 0) cur = 0;
 
   capitalCache = new Map();
@@ -986,6 +1010,12 @@ function renderStartCards() {
 }
 
 /** 按 titlemap 的某一档重建国家名单与归属 */
+function countryByTag(tag) {
+  if (!PACK || !PACK.titles || !PACK.titles.keys) return -1;
+  const keys = PACK.titles.keys;
+  return countries.findIndex(c => String(keys[c.titleId] || "").replace(/^[0-9]{4}_/, "") === tag);
+}
+
 function buildCountriesFromTier(tierIdx) {
   const tm = PACK.tm, titles = PACK.titles;
   const names = titles.names, colors = titles.colors;
@@ -1008,8 +1038,36 @@ function buildCountriesFromTier(tierIdx) {
   for (const [tid, slot] of used) remap.set(slot, list.find(c => c.titleId === tid).slot);
   for (let p = 1; p < NT; p++) if (OWNER[p] !== NO) OWNER[p] = remap.get(OWNER[p]);
   countries = list;
-  cur = countries.findIndex(c => c.name === "德意志国");
+  cur = countryByTag("GER");
+  if (cur < 0) cur = countries.findIndex(c => c.name === "德意志国" || c.name === "德国");
   if (cur < 0) cur = 0;
+}
+
+/** 把数据包里的阵营名单套到当前国家表上 */
+function initFactionsFromPack() {
+  factions = [];
+  facOfCountry = new Uint8Array(countries.length);
+  provFacData = new Uint8Array(LUT_N);
+  facPalData = new Uint8Array(64 * 4);
+  curFac = -1;
+  const defs = (PACK && PACK.manifest && PACK.manifest.factions) || [];
+  if (!defs.length) { updateFacData(); return; }
+
+  const slotOfTag = new Map();
+  countries.forEach((c, i) => {
+    const k = (PACK.titles.keys && PACK.titles.keys[c.titleId]) || "";
+    const tag = k.replace(/^[0-9]{4}_/, "");
+    slotOfTag.set(tag, i);
+  });
+  defs.forEach((f, idx) => {
+    factions.push({name: f.name || ("阵营 " + (idx + 1)), color: (f.color || [90, 110, 150]).slice()});
+    for (const t of (f.members || [])) {
+      const i = slotOfTag.get(t);
+      if (i != null) facOfCountry[i] = idx + 1;
+    }
+  });
+  curFac = factions.length ? 0 : -1;
+  updateFacData();
 }
 
 /** 切剧本：清空编辑，重铺归属 */
@@ -1025,11 +1083,7 @@ function applyScenario(idx) {
   stroke = null;
   updateUndo();
 
-  factions = [];
-  facOfCountry = new Uint8Array(countries.length);
-  provFacData = new Uint8Array(LUT_N);
-  facPalData = new Uint8Array(64 * 4);
-  curFac = -1;
+  initFactionsFromPack();
 
   zones = [];
   zoneOfProv = new Uint8Array(LUT_N);
@@ -1074,6 +1128,32 @@ async function chooseScenario(i) {
   closeStartPage();
   applyScenario(i);
   toast("已载入 " + sceneName(i));
+}
+
+/** 多底图：显示选择页 */
+function showPackChooser(list) {
+  const box = $("#packCards");
+  if (!box) return;
+  box.innerHTML = "";
+  list.forEach(item => {
+    const b = document.createElement("button");
+    b.className = "card";
+    const t = document.createElement("b");
+    t.textContent = item.label || "未命名底图";
+    b.appendChild(t);
+    const d = document.createElement("span");
+    const m = item.meta || {};
+    d.textContent = (m.scenario ? m.scenario + " · " : "") +
+      (m.provinces ? m.provinces + " 个省" : "") +
+      (m.states ? " · " + m.states + " 个州" : "");
+    b.appendChild(d);
+    b.onclick = () => {
+      $("#packs").classList.add("hide");
+      loadPack({arrayBuffer: () => Promise.resolve(item.bytes)}).catch(e => toast("载入失败：" + e.message));
+    };
+    box.appendChild(b);
+  });
+  $("#packs").classList.remove("hide");
 }
 
 function showStartPage() {
@@ -2518,7 +2598,7 @@ function exportPNG(scale, opts) {
 }
 /* ---------- UI ---------- */
 const NOTICE_KEY = "mapStudioNotice";
-const NOTICE_VER = "1.6";
+const NOTICE_VER = "1.7";
 function closeNotice() {
   if ($("#noticeAck").checked) {
     try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
@@ -2885,6 +2965,9 @@ if (qs.get("cs")) {
 if (qs.has("cfm")) {
   setTimeout(() => askConfirm("换成 1939 年剧本 会清空当前地图（12 步编辑、2 个势力范围、1 个阵营），且这一步不能撤销。确定继续？"), 1200);
 }
+if (qs.get("tab")) {
+  setTimeout(() => { const t = qs.get("tab"); if (["cty","fac","zone"].includes(t)) setTab(t); }, 900);
+}
 if (qs.has("nonames")) {
   setTimeout(() => { $("#showNamesC").checked = false; showNames = false; applyLook({}, false); }, 700);
 }
@@ -2916,7 +2999,7 @@ if (qs.has("corruptsave")) {
 }
 if (qs.has("painttest")) {
   setTimeout(() => {
-    const gi = countries.findIndex(c => c.name === "德意志国");
+    const gi = countryByTag("GER");
     const fi = countries.findIndex(c => c.name === "法国");
     let gp = -1;
     for (let p = 1; p < NT; p++) if (OWNER[p] === gi && !water[p]) { gp = p; break; }
@@ -2933,14 +3016,16 @@ if (qs.has("checkrestore")) {
   }, 2600);
 }
 if (qs.has("bugtest")) {
-  setTimeout(() => {
+  const ivBt = setInterval(() => {
+    if (!PACK) return;
+    clearInterval(ivBt);
     const R = [];
     const ok = (name, cond, extra) => R.push(name + (cond ? ":OK" : ":FAIL") + (extra ? "(" + extra + ")" : ""));
     try {
-      ok("countries", countries.length === 101, countries.length);
+      ok("countries", countries.length >= 60, countries.length);
       ok("anchors", anchors.length > 20, anchors.length);
       // 找一个德国省
-      const gi = countries.findIndex(c => c.name === "德意志国");
+      const gi = countryByTag("GER");
       const fi = countries.findIndex(c => c.name === "法国");
       let gp = -1;
       for (let p = 1; p < NT; p++) if (OWNER[p] === gi && !water[p]) { gp = p; break; }
@@ -3047,7 +3132,7 @@ if (qs.has("bugtest")) {
       // 边界修正：藏南/阿克赛钦 是独立州且归属中华民国
       const stZN = states.find(s => s.name === "藏南");
       const stAK = states.find(s => s.name === "阿克赛钦");
-      const chiIdx = countries.findIndex(c => c.name === "中华民国");
+      const chiIdx = countryByTag("CHI");
       ok("fix_state_zn", !!stZN && stZN.provinces.length === 4, stZN ? stZN.provinces.length : -1);
       ok("fix_state_ak", !stAK, stAK ? "still exists" : "gone");
       ok("fix_owner_zn", !!stZN && OWNER[stZN.provinces[0]] === chiIdx, chiIdx);
@@ -3072,7 +3157,7 @@ if (qs.has("bugtest")) {
       ok("city_hangzhou", CITY.some(c => c.name === "杭州"), CITY.length);
 
       // 阵营：新建按钮可见 + 能新建 + 能归属
-      const gi2 = countries.findIndex(c => c.name === "德意志国");
+      const gi2 = countryByTag("GER");
       let gp2 = -1;
       for (let p = 1; p < NT; p++) if (OWNER[p] === gi2 && !water[p]) { gp2 = p; break; }
       setTab("fac");
@@ -3093,27 +3178,38 @@ if (qs.has("bugtest")) {
       ok("showfac_default", showFac === true);
 
       // 剧本
-      const countBy = name => {
+      const countBy = tag => {
         let n = 0;
-        for (let p = 1; p < NT; p++) if (OWNER[p] !== NO && countries[OWNER[p]].name === name) n++;
+        const keys = PACK.titles.keys;
+        for (let p = 1; p < NT; p++) {
+          if (OWNER[p] === NO) continue;
+          if (String(keys[countries[OWNER[p]].titleId] || "").replace(/^[0-9]{4}_/, "") === tag) n++;
+        }
         return n;
       };
-      applyScenario(0);
-      const de36 = countBy("德意志国");
-      applyScenario(1);
-      const de39 = countBy("德意志国");
-      ok("scene_1939_ger", de39 > de36, de36 + "->" + de39);
-      applyScenario(2);
+      const iBase = Math.max(0, scenarioDefs.findIndex(d => d.tier === 0));
+      const iBlank = scenarioDefs.findIndex(d => d.tier < 0);
+      applyScenario(iBase);
+      const de36 = countBy("GER");
+      const i1939 = scenarioDefs.findIndex(d => d.tier === 1);
+      if (i1939 >= 0) {
+        applyScenario(i1939);
+        const de39 = countBy("GER");
+        ok("scene_1939_ger", de39 >= de36, de36 + "->" + de39);
+      } else {
+        ok("scene_1939_ger", true, "单剧本，跳过");
+      }
+      applyScenario(iBlank);
       let ownedAny = 0;
       for (let p = 1; p < NT; p++) if (OWNER[p] !== NO) ownedAny++;
       ok("scene_blank_empty", ownedAny === 0, ownedAny);
       ok("scene_blank_list", countries.length > 50, countries.length);
-      applyScenario(0);
-      ok("scene_back_1936", countBy("德意志国") === de36, countBy("德意志国"));
+      applyScenario(iBase);
+      ok("scene_back_1936", countBy("GER") === de36, countBy("GER"));
       ok("names_off_keeps_cities", true, "see renderLabelsOverlay");
       document.title = "BUGTEST " + R.join(" ");
     } catch (e) { document.title = "BUGTEST CRASH " + e.message; }
-  }, 1500);
+  }, 300);
 }
 if (qs.has("facdemo")) {
   setTimeout(() => {

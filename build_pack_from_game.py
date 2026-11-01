@@ -264,6 +264,163 @@ def parse_countries(vfs, loc):
     return out
 
 
+# ---------------------------------------------------------------- 阵营
+
+def parse_factions(vfs, loc, countries):
+    """从 history/countries 里读 create_faction_from_template 与 add_to_faction。
+
+    两种写法：
+        create_faction_from_template = faction_template_allies
+        create_faction_from_template = { name = GER_FACTION_NAME template = faction_template_generic }
+    """
+    templates = {}
+    for f in vfs.glob("common/factions/templates"):
+        s = strip_comments(read(f))
+        for m in re.finditer(r"(faction_template_[A-Za-z0-9_]+)\s*=\s*\{", s):
+            key = m.group(1)
+            i = m.end() - 1
+            depth = 0
+            j = i
+            while j < len(s):
+                if s[j] == "{":
+                    depth += 1
+                elif s[j] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            body = s[i:j]
+            nm = re.search(r"\bname\s*=\s*([A-Za-z0-9_]+)", body)
+            templates.setdefault(key, nm.group(1) if nm else "")
+
+    found = []
+    for f in vfs.glob("history/countries"):
+        tag = os.path.basename(f)[:3].upper()
+        s = strip_comments(read(f))
+        m = re.search(r"create_faction_from_template\s*=\s*", s)
+        if not m:
+            continue
+        rest = s[m.end():]
+        if rest.lstrip().startswith("{"):
+            i = s.index("{", m.end())
+            depth = 0
+            j = i
+            while j < len(s):
+                if s[j] == "{":
+                    depth += 1
+                elif s[j] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            body = s[i:j]
+            nm = re.search(r"\bname\s*=\s*([A-Za-z0-9_]+)", body)
+            name_key = nm.group(1) if nm else ""
+            tp = re.search(r"\btemplate\s*=\s*([A-Za-z0-9_]+)", body)
+            tpl = tp.group(1) if tp else ""
+        else:
+            tpl = (re.match(r"([A-Za-z0-9_]+)", rest) or [None, ""])[1]
+            name_key = templates.get(tpl, "")
+        members = []
+        for am in re.finditer(r"\badd_to_faction\s*=\s*([A-Z]{3})\b", s):
+            t = am.group(1)
+            if t not in members:
+                members.append(t)
+        if tag not in members:
+            members.insert(0, tag)
+        members = [m2 for m2 in members if m2 in countries]
+        if not members:
+            continue
+        name = loc.get(name_key, "") if name_key else ""
+        found.append({"tag": tag, "name": name or (countries[members[0]]["name"] + " 阵营"),
+                      "members": members})
+    # 同名合并
+    merged = {}
+    for f in found:
+        if f["name"] in merged:
+            for m2 in f["members"]:
+                if m2 not in merged[f["name"]]["members"]:
+                    merged[f["name"]]["members"].append(m2)
+        else:
+            merged[f["name"]] = {"tag": f["tag"], "name": f["name"], "members": list(f["members"])}
+    out = []
+    for k, v in merged.items():
+        lead = v["members"][0]
+        out.append({"name": v["name"], "color": countries.get(lead, {}).get("color", [90, 110, 150]),
+                    "members": v["members"]})
+    return out
+
+
+
+
+# ---------------------------------------------------------------- 边界修正
+
+def load_fixes(path):
+    if not path or not os.path.exists(path):
+        return {"states": [], "province_state": []}
+    with open(path, encoding="utf-8") as f:
+        d = json.load(f)
+    d.setdefault("states", [])
+    d.setdefault("province_state", [])
+    return d
+
+
+def apply_fixes(states, fixes):
+    """按配置：把一批省份单列成新州，或并进已有的州。"""
+    for k, item in enumerate(fixes["states"]):
+        provs = set(item["provinces"])
+        for st in states:
+            st["provinces"] = [p for p in st["provinces"] if p not in provs]
+        states.append({
+            "id": 90000 + k, "loc": "", "name": item["name"],
+            "provinces": sorted(provs), "owner": item.get("owner", "CHI"),
+            "vps": [],
+        })
+        print("  修正：单列成州 %s（%d 省）" % (item["name"], len(provs)))
+
+    for item in fixes["province_state"]:
+        pid = item["province"]
+        target = None
+        for st in states:
+            if st["name"] == item["state"] or st["loc"] == item["state"]:
+                target = st
+                break
+        if not target:
+            print("  修正：找不到州 %s" % item["state"])
+            continue
+        for st in states:
+            if st is not target and pid in st["provinces"]:
+                st["provinces"] = [p for p in st["provinces"] if p != pid]
+        if pid not in target["provinces"]:
+            target["provinces"].append(pid)
+        print("  修正：省 %d 并入 %s" % (pid, target["name"]))
+    return states
+
+
+# ---------------------------------------------------------------- 名字翻译
+
+def load_name_map(path):
+    if not path or not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def has_cjk(text):
+    return any("\u4e00" <= ch <= "\u9fff" for ch in text)
+
+
+def translate(name, table):
+    """只有纯英文（没有汉字）的名字才翻译，免得覆盖中文名。"""
+    if not name or has_cjk(name):
+        return name
+    if name in table:
+        return table[name]
+    # 通用词替换（长的先换）
+    for en, zh in table.get("__terms__", {}).items() if isinstance(table.get("__terms__"), dict) else []:
+        name = name.replace(en, zh)
+    return name
+
 # ---------------------------------------------------------------- 地形烘焙
 
 def hillshade(hm):
@@ -319,6 +476,8 @@ def main():
     ap.add_argument("--label", default="自定义地图")
     ap.add_argument("--locale", default="simp_chinese")
     ap.add_argument("--scenario-name", default="")
+    ap.add_argument("--fixes", default="")
+    ap.add_argument("--names", default="")
     args = ap.parse_args()
 
     vfs = VFS([args.game, args.base])
@@ -339,9 +498,19 @@ def main():
 
     print("解析州 / 战略区 / 国家…")
     states = parse_states(vfs, loc)
+    fixes_path = args.fixes or os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixes.json")
+    names_path = args.names or os.path.join(os.path.dirname(os.path.abspath(__file__)), "name_map.json")
+    states = apply_fixes(states, load_fixes(fixes_path))
+    name_map = load_name_map(names_path)
     srs = parse_srs(vfs, loc)
     countries = parse_countries(vfs, loc)
+    for c in countries.values():
+        c["name"] = translate(c["name"], name_map)
     print("  州 %d / 战略区 %d / 国家 %d" % (len(states), len(srs), len(countries)))
+    factions = parse_factions(vfs, loc, countries)
+    for f in factions:
+        f["name"] = translate(f["name"], name_map)
+    print("  阵营 %d 个：%s" % (len(factions), "、".join(f["name"] for f in factions[:5])))
 
     # ---- 归属
     owner_of = np.array([None] * NT, dtype=object)
@@ -461,6 +630,7 @@ def main():
         "waterTier": 2, "terrain": "terrain.jpg", "cities": "cities.json",
         "dataVersion": 1,
         "scenarios": [{"key": "default", "name": name, "tier": 0}],
+        "factions": factions,
         "stats": {"numProvinces": NT, "numTitles": len(keys),
                   "numStates": len(states), "numSR": len(srs), "numCountries": len(used)},
     }
