@@ -249,6 +249,10 @@
       <span class="mini" style="flex:none;width:34px">地形</span>
       <input type="range" id="terrAmt" min="0" max="100" value="100" style="flex:1;min-width:0">
     </div>
+    <div class="row" style="margin-bottom:5px">
+      <span class="mini" style="flex:none;width:34px">国界</span>
+      <input type="range" id="borderW" min="1" max="4" step="0.5" value="1" style="flex:1;min-width:0">
+    </div>
     <label class="row" style="font-size:12px;color:var(--dim);cursor:pointer;margin-bottom:6px">
       <input type="checkbox" id="stateB" style="accent-color:var(--gold)"> 显示州界
     </label>
@@ -336,7 +340,7 @@
         <li><b>隐私</b>：所有编辑只保存在你自己浏览器的本地存储里，工具不联网、不上传任何数据。</li>
         <li><b>浏览器</b>：请用 Microsoft Edge 或 Chrome 打开。微信、QQ、搜狗等内置浏览器内核较旧，可能白屏。</li>
       </ol>
-      <p style="color:var(--faint)">v1.43 · 由 DeepSeek Harness 协助编写</p>
+      <p style="color:var(--faint)">v1.44 · 由 DeepSeek Harness 协助编写</p>
     </div>
     <div class="nfoot">
       <label><input type="checkbox" id="noticeAck"> 不再提示</label>
@@ -417,6 +421,7 @@ uniform float uSeaMix;   // 海面覆盖程度
 uniform float uLift;     // 整体提亮
 uniform vec3  uCBorder;  // 国界颜色
 uniform float uCMix;     // 国界浓度
+uniform float uCBW;      // 国界粗细（倍率）
 
 out vec4 frag;
 
@@ -488,12 +493,25 @@ void main(){
     if (!water0 && zoneOf(n) != zn) zdiff = true;
     if (!water0 && stOf(n) != stOf(id)) sdiff = true;
   }
+  // 国界加粗：再按更大半径采一圈，只认「陆地 + 不同归属」
+  bool countryWide = false;
+  if (uCBW > 1.4 && !water0) {
+    int rw = int(float(r) * uCBW);
+    for (int i = 0; i < 4; i++) {
+      ivec2 o = ivec2((i == 0) ? -rw : (i == 1) ? rw : 0, (i == 2) ? -rw : (i == 3) ? rw : 0);
+      ivec2 q = clamp(ip + o, ivec2(0), mx);
+      uint n = texelFetch(uProv, q, 0).r;
+      if (n == id) continue;
+      if (palOf(n).a < 0.5) continue;
+      if (ownOf(n) != ow0) { countryWide = true; break; }
+    }
+  }
   if (coast) col *= 0.66;
-  if (countryDiff) {
-    if (fdiff) col = mix(fcol, vec3(0.04, 0.05, 0.06), 0.18);   // 阵营分界：彩色描边
-    else col = mix(col, uCBorder, uCMix);
+  if (countryDiff || countryWide) {
+    if (countryDiff && fdiff) col = mix(fcol, vec3(0.04, 0.05, 0.06), 0.18);   // 阵营分界：彩色描边
+    else col = mix(col, uCBorder, uCMix * (countryDiff ? 1.0 : 0.9));
   } else if (anyDiff && !water0) col *= mix(1.0, 0.82, uProvB);
-  if (!countryDiff && sdiff && uStateB > 0.5) col *= 0.66;
+  if (!countryDiff && !countryWide && sdiff && uStateB > 0.5) col *= 0.66;
   if (zdiff) col = mix(col, zcol * 0.5, 0.8);                  // 势力范围边界
 
   if (hiOf(id) > 0u) {
@@ -596,7 +614,7 @@ const THEMES = {
                  title: "#000080", titleRule: "rgba(0,0,128,0.6)"}}
 };
 let look = {theme: "default", sat: 1, tint: [1, 1, 1], bg: [0.043, 0.055, 0.071],
-  sea: [0, 0, 0], seaMix: 0, lift: 0, border: [0.03, 0.04, 0.05], borderMix: 0.64,
+  sea: [0, 0, 0], seaMix: 0, lift: 0, border: [0.03, 0.04, 0.05], borderMix: 0.64, borderW: 1,
   ui: UI_DEFAULT, provB: 1, stateB: false, terr: 1};
 
 /* 势力：国家集团，渲染成斜纹 + 彩色边境 */
@@ -850,7 +868,7 @@ function initGL(terrainImg) {
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
   gl.useProgram(prog);
-  for (const n of ["uProv", "uOwner", "uHi", "uPal", "uFac", "uFacPal", "uState", "uZone", "uZonePal", "uTerr", "uScreen", "uOffset", "uSize", "uScale", "uDbg", "uFacOn", "uProvB", "uStateB", "uSat", "uTerrAmt", "uTint", "uBg", "uSea", "uSeaMix", "uLift", "uCBorder", "uCMix"])
+  for (const n of ["uProv", "uOwner", "uHi", "uPal", "uFac", "uFacPal", "uState", "uZone", "uZonePal", "uTerr", "uScreen", "uOffset", "uSize", "uScale", "uDbg", "uFacOn", "uProvB", "uStateB", "uSat", "uTerrAmt", "uTint", "uBg", "uSea", "uSeaMix", "uLift", "uCBorder", "uCMix", "uCBW"])
     uni[n] = gl.getUniformLocation(prog, n);
 
   tex.prov = mkTex(gl.R16UI, W, H, gl.RED_INTEGER, gl.UNSIGNED_SHORT, provId);
@@ -972,6 +990,7 @@ function draw(screenW, screenH, offX, offY, scale) {
   gl.uniform1f(uni.uLift, look.lift);
   gl.uniform3f(uni.uCBorder, look.border[0], look.border[1], look.border[2]);
   gl.uniform1f(uni.uCMix, look.borderMix);
+  gl.uniform1f(uni.uCBW, look.borderW || 1);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
 
@@ -1781,7 +1800,8 @@ function drawCities(ctx, scale, ox, oy, vw, vh, placed, opts) {
   else if (scale < 1.2) { minVp = 5; minCapVp = 2; }
   else if (scale < 2.0) { minVp = 1; minCapVp = 0; }
   else { minVp = 0; minCapVp = 0; }
-  const zf = Math.max(0.7, Math.min(1.7, Math.sqrt(scale / 0.9)));
+  const zf = opts.zoomFactor != null ? opts.zoomFactor
+    : Math.max(0.7, Math.min(1.7, Math.sqrt(scale / 0.9)));
   let n = 0;
 
   const capMinArea = opts.capMinArea == null ? 130 : opts.capMinArea;
@@ -1795,7 +1815,8 @@ function drawCities(ctx, scale, ox, oy, vw, vh, placed, opts) {
     }
     const x = c.x * scale + ox, y = c.y * scale + oy;
     if (x < -60 || y < -60 || x > vw + 60 || y > vh + 60) return false;
-    const size = Math.max(7, Math.min(26, (7.0 + Math.min(c.vp, 30) * 0.26) * fs * zf));
+    const pxs = opts.pxScale || 1;
+    const size = Math.max(7, Math.min(26, (7.0 + Math.min(c.vp, 30) * 0.26) * fs * zf)) * pxs;
     const ui = look.ui || UI_DEFAULT;
     let r = (isCap ? size * 0.62 * ui.capScale : size * 0.27 * ui.dotScale);
     if (isCap) r = Math.max(3.1, r);
@@ -1913,6 +1934,7 @@ function drawLegend(ctx, w, h, limit) {
   const rowH = Math.round(fs * 1.95);
   const sw = Math.round(fs * 1.0);
   ctx.font = "500 " + fs + "px " + mapFont();
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
   let maxName = 0;
   for (const i of show) maxName = Math.max(maxName, ctx.measureText(countries[i].name).width);
 
@@ -2187,7 +2209,7 @@ async function buildPoster(scale, opts, onStep) {
   const minScreen = Math.round(4500 * scale * scale);
   drawLabelLayer(ctx, scale, 0, 0, outW, outH, {
     names: opts.names, cities: opts.cities, minScreen: minScreen, sizeK: 0.1,
-    minSize: 9, maxSize: Math.round(outH * 0.05), fontScale: fontScale
+    minSize: 9, maxSize: Math.round(outH * 0.05), fontScale: fontScale, pxScale: scale, zoomFactor: 1
   });
   if (opts.title) drawTitle(ctx, outW, outH, opts.title);
   if (opts.legend) drawLegend(ctx, outW, outH, 24);
@@ -2215,7 +2237,7 @@ function exportPNG(scale, opts) {
 }
 /* ---------- UI ---------- */
 const NOTICE_KEY = "mapStudioNotice";
-const NOTICE_VER = "1.43";
+const NOTICE_VER = "1.44";
 function closeNotice() {
   if ($("#noticeAck").checked) {
     try { localStorage.setItem(NOTICE_KEY, NOTICE_VER); } catch (e) {}
@@ -2334,7 +2356,7 @@ function applyLook(patch, save) {
   if (save !== false) {
     try {
       localStorage.setItem("mapLook", JSON.stringify({
-        theme: look.theme, provB: look.provB, stateB: look.stateB, terr: look.terr,
+        theme: look.theme, provB: look.provB, stateB: look.stateB, terr: look.terr, borderW: look.borderW,
         names: showNames, cities: showCities, caps: showCapitals
       }));
     } catch (e) {}
@@ -2343,6 +2365,7 @@ function applyLook(patch, save) {
 $("#theme").onchange = e => applyLook({theme: e.target.value});
 $("#provB").oninput = e => applyLook({provB: +e.target.value / 100});
 $("#terrAmt").oninput = e => applyLook({terr: +e.target.value / 100});
+$("#borderW").oninput = e => applyLook({borderW: +e.target.value});
 $("#stateB").onchange = e => applyLook({stateB: e.target.checked});
 $("#showNamesC").onchange = e => { showNames = e.target.checked; applyLook({}); };
 $("#showCitiesC").onchange = e => { showCities = e.target.checked; applyLook({}); };
@@ -2354,6 +2377,8 @@ try {
     look.provB = typeof s.provB === "number" ? s.provB : 1;
     look.terr = typeof s.terr === "number" ? s.terr : 1;
     look.stateB = !!s.stateB;
+    look.borderW = typeof s.borderW === "number" ? s.borderW : 1;
+    $("#borderW").value = look.borderW;
     showNames = s.names !== false;
     showCities = s.cities !== false;
     showCapitals = s.caps !== false;
@@ -2557,6 +2582,9 @@ if (qs.has("ack")) {
 if (qs.get("theme") && THEMES[qs.get("theme")]) {
   const th = qs.get("theme");
   setTimeout(() => { $("#theme").value = th; applyLook({theme: th}, false); }, 600);
+}
+if (qs.get("bw")) {
+  setTimeout(() => { $("#borderW").value = qs.get("bw"); applyLook({borderW: +qs.get("bw")}, false); }, 600);
 }
 if (qs.has("stateb")) {
   setTimeout(() => { $("#stateB").checked = true; applyLook({stateB: true}, false); }, 600);
